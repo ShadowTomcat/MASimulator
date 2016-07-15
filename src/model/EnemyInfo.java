@@ -68,7 +68,7 @@ public class EnemyInfo extends PartInfo implements Cloneable {
     private Integer damageTakenNowTurn = 0;
     private Integer pDamageTakenNowTurn = 0;    // Physical
     private Integer mDamageTakenNowTurn = 0;    // Magic
-    private Integer aDamageTakenNowTurn = 0;    // Additional Damage 
+    private Integer[] eDamageTakenNowTurn = new Integer[]{0, 0, 0, 0, 0};    // Enchant Damage 
     private Integer healTakenNowTurn = 0;
     private Boolean[] darknessPos = new Boolean[]{false, false, false, false, false};   // True = darkness, false = not.
 
@@ -282,13 +282,27 @@ public class EnemyInfo extends PartInfo implements Cloneable {
     }
 
     @Override
-    public Integer getaDamageTakenNowTurn() {
-        return aDamageTakenNowTurn;
+    public Integer geteDamageTakenNowTurn(Integer damageType) {
+        if (damageType == null) {
+            Integer damageSum = 0;
+            for (Integer damage : eDamageTakenNowTurn) {
+                damageSum += damage;
+            }
+            return damageSum;
+        } else {
+            return eDamageTakenNowTurn[damageType];
+        }
     }
 
     @Override
-    public void setaDamageTakenNowTurn(Integer aDamageTakenNowTurn) {
-        this.aDamageTakenNowTurn = aDamageTakenNowTurn;
+    public void seteDamageTakenNowTurn(Integer eDamageTakenNowTurn, Integer damageType) {
+        if (damageType == null) {
+            for (int i = 0; i < this.eDamageTakenNowTurn.length; i++) {
+                this.eDamageTakenNowTurn[i] = eDamageTakenNowTurn;
+            }
+        } else {
+            this.eDamageTakenNowTurn[damageType] = eDamageTakenNowTurn;
+        }
     }
 
     @Override

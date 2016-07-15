@@ -22,7 +22,7 @@ public class Enums {
 
     public enum EnumArthur {
 
-        A0("MERCENARY", "佣兵亚瑟", "佣兵", 0, new Color(206, 119, 90)), A1("MILLIONARE", "富豪亚瑟", "富豪", 1, new Color(255, 212, 112)),
+        A0("MERCENARY", "佣兵亚瑟", "佣兵", 0, new Color(206, 119, 90)), A1("MILLIONAIRE", "富豪亚瑟", "富豪", 1, new Color(255, 212, 112)),
         A2("THIEF", "盗贼亚瑟", "盗贼", 2, new Color(112, 255, 159)), A3("SINGER", "歌姬亚瑟", "歌姬", 3, new Color(255, 111, 216));
 
         private final String id;
@@ -159,7 +159,7 @@ public class Enums {
         B3("ATK_BREAK_BY_ATK", "物攻下降", "物攻↓", 3, false), B4("ATK_BREAK_BY_INT", "魔攻下降", "魔攻↓", 4, false), B5("DEF_UP_BY_DEF", "物防上升", "物防↑", 5, true),
         B6("DEF_UP_BY_MDEF", "魔防上升", "魔防↑", 6, true), B7("GUARD_BREAK_BY_DEF", "物防下降", "物防↓", 7, false), B8("GUARD_BREAK_BY_MDEF", "魔防下降", "魔防↓", 8, false),
         B9("ATTR_SEE", "属性显示", "属性显示", 8, false), B10("WEAKNESS", "标记", "标记", 10, false), B11("DARKNESS", "黑暗", "黑暗", 11, false),
-        B12("REGENERATE_FIXED", "持续恢复", "恢复", 12, true), B13("CARD_SEAL", "卡牌封印", "封印", 13, false), B14("CARD_TRAP_DAMAGE", "卡牌陷阱", "陷阱", 14, false),
+        B12("HEAL", "持续恢复", "恢复", 12, true), B13("CARD_SEAL", "卡牌封印", "封印", 13, false), B14("CARD_TRAP_DAMAGE", "卡牌陷阱", "陷阱", 14, false),
         B15("BURN", "燃烧", "燃烧", 15, false), B16("FREEZE", "冰冻", "冰冻", 16, false), B17("BLEED", "裂风", "裂风", 17, false),
         B18("ELECTRIC", "感电", "感电", 18, false), B19("POISON", "中毒", "中毒", 19, false), B20("HEAL_REVERSE", "治疗反转", "治疗反转", 20, false),
         B21("CARD_SEAL_REGIST", "封印抗性", "抗封", 21, true), B22("DARKNESS_REGIST", "黑暗抗性", "抗暗", 22, true), B23("COVERING", "嘲讽", "嘲讽", 23, true),
@@ -168,7 +168,7 @@ public class Enums {
         B30("ATK_UP_BY_MND", "治疗量提升", "治疗↑", 30, true), B31("ATK_BREAK_BY_MND", "治疗量下降", "治疗↓", 30, true), B32("CRITICAL_UP", "暴击率提升", "暴击↑", 32, true),
         B33("BURN_RESIST", "燃烧抗性", "燃抗", 33, true), B34("FREEZE_RESIST", "冰冻抗性", "冻抗", 34, true), B35("BLEED_RESIST", "裂风抗性", "裂抗", 35, true),
         B36("ELECTRIC_RESIST", "感电抗性", "电抗", 36, true), B37("POISON_RESIST", "中毒抗性", "毒抗", 37, true), B38("COST_BLOCK", "COST锁定", "COST↓", 38, false),
-        B39("ENCHANT", "追加伤害", "追伤", 39, true), B40("ATK_UP_BY_MAX_HP", "最大HP上升", "HP↑", 39, true);
+        B39("ENCHANT", "追加伤害", "追伤", 39, true), B40("ATK_UP_BY_MAX_HP", "最大HP上升", "HP↑", 39, true), B41("DOT_VALUE_UP", "DOT增强", "DOT↑", 40, true);
         private final String id;
         private final String name;
         private final String nameS;
@@ -365,7 +365,8 @@ public class Enums {
 
         T0("无", "NONE", -1, "NONE", "无", new Color(230, 230, 230)), T1("火", "FIRE", 0, "BURN", "燃烧", new Color(255, 120, 120)),
         T2("冰", "ICE", 1, "FREEZE", "冰冻", new Color(140, 205, 255)), T3("风", "WIND", 2, "BLEED", "裂风", new Color(140, 255, 140)),
-        T4("光", "LIGHT", 3, "ELECTRIC", "感电", new Color(240, 210, 150)), T5("暗", "DARK", 4, "POISON", "毒", new Color(200, 140, 180));
+        T4("光", "LIGHT", 3, "ELECTRIC", "感电", new Color(240, 210, 150)), T5("暗", "DARK", 4, "POISON", "毒", new Color(200, 140, 180)),
+        T6("NULL", "NULL", null, "NULL", "NULL", new Color(230, 230, 230));
         private final String name;
         private final String id;
         private final Integer index;
@@ -373,7 +374,7 @@ public class Enums {
         private final String dotName;
         private final Color bgColor;
 
-        private EnumType(String name, String id, int index, String dotId, String dotName, Color bgColor) {
+        private EnumType(String name, String id, Integer index, String dotId, String dotName, Color bgColor) {
             this.name = name;
             this.id = id;
             this.index = index;

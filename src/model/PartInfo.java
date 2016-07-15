@@ -48,9 +48,9 @@ public abstract class PartInfo {
 
     public abstract void setmDamageTakenNowTurn(Integer mDamageTakenNowTurn);
 
-    public abstract Integer getaDamageTakenNowTurn();
+    public abstract Integer geteDamageTakenNowTurn(Integer damageType);
 
-    public abstract void setaDamageTakenNowTurn(Integer aDamageTakenNowTurn);
+    public abstract void seteDamageTakenNowTurn(Integer aDamageTakenNowTurn, Integer damageType);
 
     public abstract HashMap<String, List<BuffInfo>> getBuffs();
 

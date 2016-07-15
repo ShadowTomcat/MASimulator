@@ -879,6 +879,7 @@ public class DeckSimu extends javax.swing.JPanel {
         searchCondition.get(j).add(new JCheckBox("自身数值加伤", null, true));
         searchCondition.get(j).add(new JCheckBox("追伤", null, true));
         searchCondition.get(j).add(new JCheckBox("最大HP↑", null, true));
+        searchCondition.get(j).add(new JCheckBox("比例扣血", null, true));
         
         i = 0;
         javax.swing.GroupLayout jPanel7Layout = new javax.swing.GroupLayout(panFunction);
@@ -924,6 +925,7 @@ public class DeckSimu extends javax.swing.JPanel {
                                 .addComponent(searchCondition.get(j).get(i++)))
                         //.addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 5, Short.MAX_VALUE)
                         .addGroup(jPanel7Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                                .addComponent(searchCondition.get(j).get(i++))
                                 .addComponent(searchCondition.get(j).get(i++))
                                 .addComponent(searchCondition.get(j).get(i++))
                                 .addComponent(searchCondition.get(j).get(i++))
@@ -997,6 +999,8 @@ public class DeckSimu extends javax.swing.JPanel {
                                         .addComponent(searchCondition.get(j).get(i++))
                                         .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
                                 .addGroup(jPanel7Layout.createSequentialGroup()
+                                        .addComponent(searchCondition.get(j).get(i++))
+                                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                                         .addComponent(searchCondition.get(j).get(i++))
                                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                                         .addComponent(searchCondition.get(j).get(i++))

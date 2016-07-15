@@ -32,8 +32,9 @@ public class BuffInfo implements Cloneable {
      * @CARD_TRAP_DAMAGE - 0-5: card position, 6: trap damage.
      * @CARD_SEAL - 0-5: card position.
      * @ENCHANT - 0: damage value, 1: type index.
+     * @DOT_VALUE_UP - 0：damage increase rate (%), 1: dot type index.
      */
-    private final Integer turnLeft;
+    private Integer turnLeft;
     private final Integer turnSet;
     private final String type;            //Atk/Int/Mnd/Def/Mdef_up/down, regeneration, stun, card seal, dark, deal bonus/penalty, poison(s), trap, etc.
     private final Integer[] value;
@@ -53,7 +54,11 @@ public class BuffInfo implements Cloneable {
     public Integer getTurnLeft() {
         return turnLeft;
     }
-
+    
+    public void extendTurn(Integer turns) {
+        turnLeft += turns;
+    }
+    
     public Integer getTurnSet() {
         return turnSet;
     }

@@ -138,11 +138,11 @@ public class SkillTextGenerator {
 
             cell = getNotNullCell(row, colCount++);
             cell.setCellStyle(styleCell.getCellStyle());
-            cell.setCellValue(card[23]);
+            cell.setCellValue(card[24]);
 
             cell = getNotNullCell(row, colCount++);
             cell.setCellStyle(styleCell.getCellStyle());
-            cell.setCellValue(card[24]);
+            cell.setCellValue(card[25]);
 
             cell = getNotNullCell(row, colCount++);
             cell.setCellStyle(styleCell.getCellStyle());
@@ -162,10 +162,10 @@ public class SkillTextGenerator {
             }
             cell.setCellValue(rareLevel);
 
-            if (!card[24].isEmpty() && !card[24].equals("0")) {
-                skillId = card[24];
+            if (!card[25].isEmpty() && !card[25].equals("0")) {
+                skillId = card[25];
             } else {
-                skillId = card[23];
+                skillId = card[24];
             }
 
             skillArrayBase = skillMap.get(skillId).get(0);
@@ -192,11 +192,11 @@ public class SkillTextGenerator {
             // HP
             cell = getNotNullCell(row, colCount++);
             cell.setCellStyle(styleCell.getCellStyle());
-            cell.setCellValue(Integer.parseInt(card[9]));
+            cell.setCellValue(Integer.parseInt(card[10]));
             // ATK
             cell = getNotNullCell(row, colCount++);
             cell.setCellStyle(styleCell.getCellStyle());
-            cell.setCellValue(Integer.parseInt(card[12]));
+            cell.setCellValue(Integer.parseInt(card[13]));
             // INT
             cell = getNotNullCell(row, colCount++);
             cell.setCellStyle(styleCell.getCellStyle());
@@ -204,7 +204,7 @@ public class SkillTextGenerator {
             // MND
             cell = getNotNullCell(row, colCount++);
             cell.setCellStyle(styleCell.getCellStyle());
-            cell.setCellValue(Integer.parseInt(card[18]));
+            cell.setCellValue(Integer.parseInt(card[19]));
             // Category
             cell = getNotNullCell(row, colCount++);
             cell.setCellStyle(styleCell.getCellStyle());
@@ -224,7 +224,7 @@ public class SkillTextGenerator {
             cell = getNotNullCell(row, colCount++);
             cell.setCellStyle(styleCell.getCellStyle());
             cell.getCellStyle().setAlignment(CellStyle.ALIGN_LEFT);
-            cell.setCellValue(getFunctionText(card[23], rareLevel));
+            cell.setCellValue(getFunctionText(card[24], rareLevel));
             //System.out.print(";" + colCount);
             // Bonus skill
             cell = getNotNullCell(row, colCount++);
@@ -233,8 +233,8 @@ public class SkillTextGenerator {
             cell.setCellValue(sb.toString());
             //System.out.print(";" + colCount);
             // System.out.println(";" + (colCount - 1));
-            if (!card[24].isEmpty() && !card[24].equals("0")) {
-                cell.setCellValue(getFunctionText(card[24], rareLevel));
+            if (!card[25].isEmpty() && !card[25].equals("0")) {
+                cell.setCellValue(getFunctionText(card[25], rareLevel));
             } else {
                 cell.setCellValue(row.getCell(colCount - 2).getStringCellValue());
             }
@@ -242,16 +242,16 @@ public class SkillTextGenerator {
             // Attack Dialogue
             cell = getNotNullCell(row, colCount++);
             cell.setCellStyle(styleCell.getCellStyle());
-            if (card.length > 93) {
-                cell.setCellValue(card[93]);
+            if (card.length > 94) {
+                cell.setCellValue(card[94]);
             } else {
                 cell.setCellValue("");
             }
             // Support Dialogue
             cell = getNotNullCell(row, colCount++);
             cell.setCellStyle(styleCell.getCellStyle());
-            if (card.length > 94) {
-                cell.setCellValue(card[94]);
+            if (card.length > 95) {
+                cell.setCellValue(card[95]);
             } else {
                 cell.setCellValue("");
             }
@@ -447,6 +447,7 @@ public class SkillTextGenerator {
         functionMap.put("DEBUFF_RELEASE_ONE", "解除异常");
         functionMap.put("GUARD_BREAK_FIXED", "防御弱化");
         functionMap.put("ATK_BREAK_FIXED", "攻击弱化");
+        functionMap.put("ATK_BREAK_BY_SELF_PARAM", "自身数值弱攻");
         functionMap.put("ATK_OP_DAMAGE_INCREASE", "自身数值加伤");
         functionMap.put("FREEZE", "冻结");
         functionMap.put("BLEED", "裂风");
@@ -467,10 +468,13 @@ public class SkillTextGenerator {
         functionMap.put("ATTR_SEE", "揭露隐藏属性");
         functionMap.put("HEAL_BY_SELF_PARAM", "自身数值治疗");
         functionMap.put("CARD_TRAP_DAMAGE", "陷阱");
+        functionMap.put("HP_CUT", "比例扣血");
         functionMap.put("DARKNESS", "黑暗");
         functionMap.put("CARD_SEAL", "封印");
         functionMap.put("ENCHANT", "追加伤害");
+        functionMap.put("DOT_VALUE_UP", "DOT增强");
         functionMap.put("COST_BLOCK", "COST封印");
+        functionMap.put("HEAL", "HP恢复");  // Actually mixed function and buff.
 
         abbrFunctionMap = new HashMap<>();
         abbrFunctionMap.put("ATTACK_AA", "攻击");
@@ -483,6 +487,7 @@ public class SkillTextGenerator {
         abbrFunctionMap.put("DEBUFF_RELEASE_ONE", "解异常");
         abbrFunctionMap.put("GUARD_BREAK_FIXED", "防御弱化");
         abbrFunctionMap.put("ATK_BREAK_FIXED", "攻击弱化");
+        abbrFunctionMap.put("ATK_BREAK_BY_SELF_PARAM", "自身数值弱攻");
         abbrFunctionMap.put("ATK_OP_DAMAGE_INCREASE", "自身数值加伤");
         abbrFunctionMap.put("FREEZE", "冻结");
         abbrFunctionMap.put("BLEED", "裂风");
@@ -502,11 +507,13 @@ public class SkillTextGenerator {
         abbrFunctionMap.put("ATK_OP_ATTR_RATE_DOWN_INVALID", "属性不利无效");
         abbrFunctionMap.put("ATTR_SEE", "揭露隐藏属性");
         abbrFunctionMap.put("HEAL_BY_SELF_PARAM", "治疗");
+        abbrFunctionMap.put("HP_CUT", "比例扣血");
         abbrFunctionMap.put("CARD_TRAP_DAMAGE", "陷阱");
         abbrFunctionMap.put("DARKNESS", "黑暗");
         abbrFunctionMap.put("CARD_SEAL", "封印");
         abbrFunctionMap.put("ENCHANT", "追伤");
-        functionMap.put("COST_BLOCK", "COST封印");
+        abbrFunctionMap.put("DOT_VALUE_UP", "DOT↑");
+        abbrFunctionMap.put("COST_BLOCK", "COST封印");
 
         int i = 1;
         functionOrderMap = new HashMap<>();
@@ -518,6 +525,7 @@ public class SkillTextGenerator {
         functionOrderMap.put("HEAL_FIXED", i += 10);
         functionOrderMap.put("GUARD_BREAK_FIXED", i += 10);
         functionOrderMap.put("ATK_BREAK_FIXED", i += 10);
+        functionOrderMap.put("ATK_BREAK_BY_SELF_PARAM", i += 10);
         functionOrderMap.put("REGENERATE_FIXED", i += 10);
         functionOrderMap.put("ATK_UP_BY_SELF_PARAM", i += 10);
         functionOrderMap.put("DEF_UP_BY_SELF_PARAM", i += 10);
@@ -539,7 +547,9 @@ public class SkillTextGenerator {
         functionOrderMap.put("ATK_OP_ATTR_RATE_DOWN_INVALID", i += 10);
         functionOrderMap.put("ATTR_SEE", i += 10);
         functionOrderMap.put("ENCHANT", i += 10);
+        functionOrderMap.put("HP_CUT", i += 10);
         functionOrderMap.put("CARD_TRAP_DAMAGE", i += 10);
+        functionOrderMap.put("DOT_VALUE_UP", i += 10);
         functionOrderMap.put("DEAL_BONUS", i += 10);
 
         attackTypeMap = new HashMap<>();
@@ -841,8 +851,32 @@ public class SkillTextGenerator {
                 }
                 sb.append("的");
                 sb.append(new BigDecimal(skillRole[21]).divide(BigDecimal.TEN)).append("%");
-//                val = Long.parseLong(skillRole[21]) / 10;
-//                sb.append(val).append("%");
+                break;
+            case "ATK_BREAK_BY_SELF_PARAM":
+                sb.append(skillRole[18]).append("回合/");
+                if (skillRole[19].equals("ATK")) {
+                    sb.append("物理攻击力");
+                } else if (skillRole[19].equals("INT")) {
+                    sb.append("魔法攻击力");
+                } else if (skillRole[19].equals("MND")) {
+                    sb.append("治疗量");
+                } else if (skillRole[19].equals("MAX_HP")) {
+                    sb.append("最大HP");
+                } else {
+                    System.out.println("Error:" + function);
+                }
+                sb.append("下降").append(Long.parseLong(skillRole[23]) * maxLevel).append("+");
+                if (skillRole[20].equals("ATK")) {
+                    sb.append("物理攻击力");
+                } else if (skillRole[20].equals("INT")) {
+                    sb.append("魔法攻击力");
+                } else if (skillRole[20].equals("MND")) {
+                    sb.append("治疗量");
+                } else {
+                    System.out.println("Error:" + function);
+                }
+                sb.append("的");
+                sb.append(new BigDecimal(skillRole[21]).divide(BigDecimal.TEN)).append("%");
                 break;
             case "DEF_UP_BY_SELF_PARAM":
                 sb.append(skillRole[18]).append("回合/");
@@ -891,6 +925,13 @@ public class SkillTextGenerator {
                 sb.append(skillRole[18]).append("回合/赋予");
                 val = Long.parseLong(skillRole[19]) + Long.parseLong(skillRole[22]) * maxLevel;
                 sb.append(val).append(getType(skillRole[23])).append("追加伤害");
+                break;
+            case "HP_CUT":
+                sb.append("HP扣减最大值的").append(skillRole[18]).append("%");
+                break;
+            case "DOT_VALUE_UP":
+                sb.append(functionMap.get(skillRole[23])).append("的效果回合+").append(skillRole[18]).
+                        append("，伤害+").append(skillRole[18]).append("%");
                 break;
             default:
                 System.out.println("Unrecognized function: " + function);
@@ -944,7 +985,16 @@ public class SkillTextGenerator {
                 sb.append("自身/").append(skillArray[22]).append("枚以上");
                 break;
             case "SELF_BUFF":
-                sb.append("自身/").append(functionMap.get(skillArray[21])).append("状态");
+                sb.append("自身为").append(functionMap.get(skillArray[21])).append("状态");
+                break;
+            case "ENEMY_SIDE_DEBUFF":
+                sb.append("敌方为").append(functionMap.get(skillArray[21])).append("状态");
+                break;
+            case "TARGET_BUFF":
+                sb.append("目标为").append(functionMap.get(skillArray[21])).append("状态");
+                break;
+            case "USER_SIDE_DEBUFF":
+                sb.append("我方为").append(functionMap.get(skillArray[21])).append("状态");
                 break;
             default:
                 System.out.println("Unrecognized condition: " + condition);
@@ -963,7 +1013,7 @@ public class SkillTextGenerator {
         if (str.equals("攻击提升") || str.equals("防御提升") || str.equals("自身数值加攻") || str.equals("自身数值加防")) {
             str = abbrPropertyMap.get(skillRoleArray.get(index)[19]) + "↑";
         }
-        if (str.equals("攻击弱化") || str.equals("防御弱化")) {
+        if (str.equals("攻击弱化") || str.equals("防御弱化") || str.equals("自身数值弱攻") || str.equals("自身数值弱防")) {
             str = abbrPropertyMap.get(skillRoleArray.get(index)[19]) + "↓";
         }
         return str;
