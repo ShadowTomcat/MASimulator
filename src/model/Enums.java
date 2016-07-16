@@ -103,7 +103,7 @@ public class Enums {
 
     public enum EnumPhysicsMagic {
 
-        PM0("PHYSICS", "物理", 0, "DEF"), PM1("MAGIC", "魔法", 1, "MDEF");
+        PM0("PHYSICS", "物理", 0, "DEF"), PM1("MAGIC", "魔法", 1, "MDEF"), PM2("ENCHANT", "追伤", 2, "NULL"), PM3("ALL", "任意", 3, "NULL");
         private final String id;
         private final String name;
         private final Integer index;

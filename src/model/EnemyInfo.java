@@ -68,7 +68,8 @@ public class EnemyInfo extends PartInfo implements Cloneable {
     private Integer damageTakenNowTurn = 0;
     private Integer pDamageTakenNowTurn = 0;    // Physical
     private Integer mDamageTakenNowTurn = 0;    // Magic
-    private Integer[] eDamageTakenNowTurn = new Integer[]{0, 0, 0, 0, 0};    // Enchant Damage 
+    private final Integer[] eDamageTakenNowTurn = new Integer[]{0, 0, 0, 0, 0};    // Enchant Damage 
+    private final Integer[] damageNumNowTurn = new Integer[]{0, 0, 0};        // Physics, Magic, Enchant
     private Integer healTakenNowTurn = 0;
     private Boolean[] darknessPos = new Boolean[]{false, false, false, false, false};   // True = darkness, false = not.
 
@@ -302,6 +303,36 @@ public class EnemyInfo extends PartInfo implements Cloneable {
             }
         } else {
             this.eDamageTakenNowTurn[damageType] = eDamageTakenNowTurn;
+        }
+    }
+
+    /**
+     * @param damageType - Physics(0), Magic(1), Enchant(2), or ALL(3).
+     * @return - Total damage numbers.
+     */
+    @Override
+    public Integer getDamageNumNowTurn(Integer damageType) {
+        if (damageType == 3) {                          // All damage nums
+            Integer damageNumSum = 0;
+            for (Integer damageNum : damageNumNowTurn) {
+                damageNumSum += damageNum;
+            }
+            return damageNumSum;
+        } else if (damageType >= 0 && damageType <= 1){ // Physics or magic includes enchant
+            return damageNumNowTurn[damageType] + damageNumNowTurn[2];
+        }else {
+            return damageNumNowTurn[damageType];
+        }
+    }
+
+    @Override
+    public void setDamageNumNowTurn(Integer damageNumNowTurn, Integer damageType) {
+        if (damageType == 3) {
+            for (int i = 0; i < this.damageNumNowTurn.length; i++) {
+                this.damageNumNowTurn[i] = damageNumNowTurn;
+            }
+        } else {
+            this.damageNumNowTurn[damageType] = damageNumNowTurn;
         }
     }
 

@@ -58,8 +58,12 @@ public class About extends javax.swing.JPanel {
         jTextArea1.setColumns(20);
         jTextArea1.setRows(5);
         jTextArea1.setFont(new Font("宋体", 0, 12));
-        jTextArea1.setText("版本：v 0.93\n制作者：拂晓之影\n更新补丁及源代码下载地址：\n"
-                + "http://pan.baidu.com/share/home?uk=2166584634\nBUG及建议回报地址：\n"
+        jTextArea1.setText("版本：v 0.94\n制作者：拂晓之影\n"
+                + "更新补丁下载地址：\n"
+                + "http://pan.baidu.com/share/home?uk=2166584634\n"
+                + "源代码下载地址：\n"
+                + "http://pan.baidu.com/share/home?uk=2166584634\n"
+                + "BUG及建议回报地址：\n"
                 + "http://ma.16163.com/thread-1717776-1-1.html\n\n本应用所含数据及模拟情景可能与实际有所差别，仅供参考。\n"
                 + "——感谢使用。");
         jTextArea1.setEditable(false);

@@ -56,7 +56,7 @@ public class MainFrame extends javax.swing.JFrame {
         mnuAbout = new javax.swing.JMenuItem();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
-        setTitle("MA Simulator v0.93");
+        setTitle("MA Simulator v0.94");
 
         jMenu2.setText("功能");
 

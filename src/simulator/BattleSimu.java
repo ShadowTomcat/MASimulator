@@ -43,6 +43,7 @@ import model.Enums.EnumBuff;
 import model.Enums.EnumCardLevel;
 import model.Enums.EnumPhysicsMagic;
 import model.PartInfo;
+import static model.Constants.*;
 import model.TurnInfoRecord;
 import swing.CardPanelMouseAdapter;
 import swing.CardSelectionPopupMenu;
@@ -123,6 +124,7 @@ public class BattleSimu extends javax.swing.JPanel {
     private Integer playedIndex;
     private Integer[][] playedTargets;      // Used when user try to select a target.
     private Boolean[][] currentChains;      // Integer[4][5] [Merc, Mill, Thie, Sing][Fire, Ice, Wind, Light, Dark]
+    private Integer deckComboCount;
     private HashMap<String, Integer> enemyTriggerAiFlag;
     private Integer[] dealCardQty;          // Record deal qty.
 
@@ -302,6 +304,7 @@ public class BattleSimu extends javax.swing.JPanel {
 
     private void nextTurn() {
         turn += 1;
+        deckComboCount = 0;     // Reset combo count
         lblTitle.setText("第" + turn + "回合");
         txtBattleInfo.append("＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝第" + turn + "回合＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝\n\n");
         txtBattleInfo.setCaretPosition(txtBattleInfo.getText().length());
@@ -310,7 +313,7 @@ public class BattleSimu extends javax.swing.JPanel {
         }
         StringBuilder sb;
 
-        // Refresh Damage
+        // Refresh (clear) Damage
         for (int i = 0; i < arthurList.size(); i++) {
             arthurList.get(i).setmDamageTakenNowTurn(0);
             arthurList.get(i).setpDamageTakenNowTurn(0);
@@ -322,6 +325,7 @@ public class BattleSimu extends javax.swing.JPanel {
             enemyList.get(i).setmDamageTakenNowTurn(0);
             enemyList.get(i).setpDamageTakenNowTurn(0);
             enemyList.get(i).seteDamageTakenNowTurn(0, null);
+            enemyList.get(i).setDamageNumNowTurn(0, 3);
             enemyList.get(i).setDamageTakenNowTurn(0);
             enemyList.get(i).setHealTakenNowTurn(0);
         }
@@ -556,7 +560,7 @@ public class BattleSimu extends javax.swing.JPanel {
             sleep(SLEEP_SHORT);
         }
 
-        for(int n = actionFilterList.size() - 1; n >= 0; n--){
+        for (int n = actionFilterList.size() - 1; n >= 0; n--) {
             actionList.add(actionFilterList.get(n));
         }
         // Re-order them.
@@ -933,7 +937,7 @@ public class BattleSimu extends javax.swing.JPanel {
                 }
                 break;
             case "ENCHANT_DAMAGE":
-                if(enemy.geteDamageTakenNowTurn(EnumType.getIndexById(enemyAiOrder[28])) < Integer.parseInt(enemyAiOrder[29])){
+                if (enemy.geteDamageTakenNowTurn(EnumType.getIndexById(enemyAiOrder[28])) < Integer.parseInt(enemyAiOrder[29])) {
                     return false;
                 }
                 break;
@@ -1041,6 +1045,21 @@ public class BattleSimu extends javax.swing.JPanel {
                     return false;
                 }
                 break;
+            case "DECK_COMBO_COUNT":
+                Integer lowerLimit = Integer.parseInt(enemyAiOrder[28]);
+                Integer upperLimit = Integer.parseInt(enemyAiOrder[29]);
+                if ((deckComboCount + 1) < lowerLimit || (deckComboCount + 1) > upperLimit) {
+                    return false;
+                }
+                break;
+            case "DAMAGE_NUM":
+                Integer damageType = EnumPhysicsMagic.getIndexById(enemyAiOrder[28]);
+                lowerLimit = Integer.parseInt(enemyAiOrder[29]);
+                upperLimit = Integer.parseInt(enemyAiOrder[30]);
+                Integer damageNum = enemy.getDamageNumNowTurn(damageType);
+                if (damageNum < lowerLimit || damageNum > upperLimit) {
+                    return false;
+                }
             case "NULL":
                 break;
             default:
@@ -1085,6 +1104,13 @@ public class BattleSimu extends javax.swing.JPanel {
         // Re-order them.
         actionList.sort(Constants.HAND_CARD_CMP);
         sortCardOrderWithSamePriority(actionList);
+
+        // Compute arthur turn values
+        for (HandCardInfo action : actionList) {
+            if (action.getCurrentChain() > deckComboCount) {
+                deckComboCount = action.getCurrentChain();
+            }
+        }
 
         txtBattleInfo.append("————————————————我方行动————————————————\n\n");
         txtBattleInfo.setCaretPosition(txtBattleInfo.getText().length());
@@ -1219,15 +1245,15 @@ public class BattleSimu extends javax.swing.JPanel {
         StringBuilder sb;
         List<String[]> skillRoleList = skillRoleMap.get(skill[27]);
         for (String[] skillRole : skillRoleList) {
-            if (skillRole[7].equals("SELECT")) {
+            if (skillRole[SKILL_ROLE_TARGET].equals("SELECT")) {
                 realTargetParts = targetParts;
-            } else if (skillRole[7].equals("ENEMY_ALL")) {
+            } else if (skillRole[SKILL_ROLE_TARGET].equals("ENEMY_ALL")) {
                 realTargetParts = new ArrayList<>();
                 realTargetParts.addAll(enemyList);
-            } else if (skillRole[7].equals("FRIEND_ALL")) {
+            } else if (skillRole[SKILL_ROLE_TARGET].equals("FRIEND_ALL")) {
                 realTargetParts = new ArrayList<>();
                 realTargetParts.addAll(arthurList);
-            } else if (skillRole[7].equals("SELF")) {
+            } else if (skillRole[SKILL_ROLE_TARGET].equals("SELF")) {
                 realTargetParts = new ArrayList<>();
                 realTargetParts.add(part);
             } else {
@@ -1278,29 +1304,29 @@ public class BattleSimu extends javax.swing.JPanel {
                 }
             }
 
-            switch (skillRole[6]) {
+            switch (skillRole[SKILL_ROLE_FUNCTION_COL]) {
                 case "NONE":
                 // DO NOTHING.
                 case "OUTPUT_TEXT":
                     // DO NOTHING.
                     break;
                 case "ATK_OP_DAMAGE_INCREASE":
-                    Integer attrVal = part.getCurrentAttr(EnumAttribute.getIndexById(skillRole[22]));
-                    val = Long.parseLong(skillRole[20]) * attrVal / 1000;
+                    Integer attrVal = part.getCurrentAttr(EnumAttribute.getIndexById(skillRole[SKILL_ROLE_PARAM5]));
+                    val = Long.parseLong(skillRole[SKILL_ROLE_PARAM3]) * attrVal / 1000;
                     atkOpVal += val.intValue();
                     log.info("val: " + val + " | atkOpVal: " + atkOpVal);
                     break;
                 case "ATK_OP_REVENGE":
-                    val = Long.parseLong(skillRole[18]) * part.getDamageTaken() / 100;
-                    if (val > part.getCurrentAttr(EnumAttribute.getIndexById(skillRole[20])) * Long.parseLong(skillRole[21]) / 100) {
-                        val = part.getCurrentAttr(EnumAttribute.getIndexById(skillRole[20])) * Long.parseLong(skillRole[21]) / 100;
+                    val = Long.parseLong(skillRole[SKILL_ROLE_PARAM1]) * part.getDamageTaken() / 100;
+                    if (val > part.getCurrentAttr(EnumAttribute.getIndexById(skillRole[SKILL_ROLE_PARAM3])) * Long.parseLong(skillRole[SKILL_ROLE_PARAM4]) / 100) {
+                        val = part.getCurrentAttr(EnumAttribute.getIndexById(skillRole[SKILL_ROLE_PARAM3])) * Long.parseLong(skillRole[SKILL_ROLE_PARAM4]) / 100;
                     }
                     atkOpVal += val.intValue();
                     break;
                 case "ATK_OP_NOW_TURN_REVENGE":
-                    val = Long.parseLong(skillRole[18]) * part.getDamageTakenNowTurn() / 100;
-                    if (val > part.getCurrentAttr(EnumAttribute.getIndexById(skillRole[20])) * Long.parseLong(skillRole[21]) / 100) {
-                        val = part.getCurrentAttr(EnumAttribute.getIndexById(skillRole[20])) * Long.parseLong(skillRole[21]) / 100;
+                    val = Long.parseLong(skillRole[SKILL_ROLE_PARAM1]) * part.getDamageTakenNowTurn() / 100;
+                    if (val > part.getCurrentAttr(EnumAttribute.getIndexById(skillRole[SKILL_ROLE_PARAM3])) * Long.parseLong(skillRole[SKILL_ROLE_PARAM4]) / 100) {
+                        val = part.getCurrentAttr(EnumAttribute.getIndexById(skillRole[SKILL_ROLE_PARAM3])) * Long.parseLong(skillRole[SKILL_ROLE_PARAM4]) / 100;
                     }
                     atkOpVal += val.intValue();
                     break;
@@ -1308,29 +1334,29 @@ public class BattleSimu extends javax.swing.JPanel {
                     rateDownInvalid = true;
                     break;
                 case "ATK_OP_DRAIN":
-                    drainRate = Integer.parseInt(skillRole[18]) + cardLevel * Integer.parseInt(skillRole[19]);
+                    drainRate = Integer.parseInt(skillRole[SKILL_ROLE_PARAM1]) + cardLevel * Integer.parseInt(skillRole[SKILL_ROLE_PARAM2]);
                     break;
                 case "ATK_OP_PIERCING":
-                    defencePiercing = Integer.parseInt(skillRole[18]) + cardLevel * Integer.parseInt(skillRole[19]);
+                    defencePiercing = Integer.parseInt(skillRole[SKILL_ROLE_PARAM1]) + cardLevel * Integer.parseInt(skillRole[SKILL_ROLE_PARAM2]);
                     break;
                 case "REVIVE":
                     for (PartInfo targetPart : realTargetParts) {
                         //Integer[] currentAttr = targetPart.getCurrentAttr();
-                        val = Long.parseLong(skillRole[18]) * targetPart.getCurrentAttr(EnumAttribute.getIndexById("MAX_HP")) / 1000;
+                        val = Long.parseLong(skillRole[SKILL_ROLE_PARAM1]) * targetPart.getCurrentAttr(EnumAttribute.getIndexById("MAX_HP")) / 1000;
                         targetPart.changeCurrentAttr(val.intValue(), EnumAttribute.getIndexById("HP"));
                         sb = new StringBuilder();
-                        sb.append(getTargetName(realTargetParts)).append("复活，并回复").append(Long.parseLong(skillRole[18]) / 10).append("％HP。\n");
+                        sb.append(getTargetName(realTargetParts)).append("复活，并回复").append(Long.parseLong(skillRole[SKILL_ROLE_PARAM1]) / 10).append("％HP。\n");
                         txtBattleInfo.append(sb.toString());
                     }
                     break;
                 case "ATTACK_AA":
-                    attrVal = part.getCurrentAttr(EnumAttribute.getIndexById(skillRole[23]));
-                    val = atkOpVal + Long.parseLong(skillRole[18]) + Long.parseLong(skillRole[19]) * cardLevel / 1000;
-                    val += Long.parseLong(skillRole[20]) * attrVal / 1000;
-                    Integer critRate = part.getCurrentAttr(EnumAttribute.getIndexById("CRIT")) + Integer.parseInt(skillRole[24]);
-                    String[] atkTypeArray = skillRole[25].split("_");
-                    String physics = skillRole[26];
-                    Integer attackTimes = Integer.parseInt(skillRole[22]);
+                    attrVal = part.getCurrentAttr(EnumAttribute.getIndexById(skillRole[SKILL_ROLE_PARAM6]));
+                    val = atkOpVal + Long.parseLong(skillRole[SKILL_ROLE_PARAM1]) + Long.parseLong(skillRole[SKILL_ROLE_PARAM2]) * cardLevel / 1000;
+                    val += Long.parseLong(skillRole[SKILL_ROLE_PARAM3]) * attrVal / 1000;
+                    Integer critRate = part.getCurrentAttr(EnumAttribute.getIndexById("CRIT")) + Integer.parseInt(skillRole[SKILL_ROLE_PARAM7]);
+                    String[] atkTypeArray = skillRole[SKILL_ROLE_PARAM8].split("_");
+                    String physics = skillRole[SKILL_ROLE_PARAM9];
+                    Integer attackTimes = Integer.parseInt(skillRole[SKILL_ROLE_PARAM5]);
                     Long defence;
                     Integer typeRate;
                     Integer critDamageRate;
@@ -1393,6 +1419,8 @@ public class BattleSimu extends javax.swing.JPanel {
                             totalDamage += damage;
                             targetPart.setDamageTaken(targetPart.getDamageTaken() + damage.intValue());
                             targetPart.setDamageTakenNowTurn(targetPart.getDamageTakenNowTurn() + damage.intValue());
+                            Integer damageTypeIndex = EnumPhysicsMagic.getIndexById(physics);
+                            targetPart.setDamageNumNowTurn(targetPart.getDamageNumNowTurn(damageTypeIndex) + 1, damageTypeIndex);
                             if (physics.equals("PHYSICS")) {
                                 targetPart.setpDamageTakenNowTurn(targetPart.getpDamageTakenNowTurn() + damage.intValue());
                             } else {
@@ -1478,7 +1506,9 @@ public class BattleSimu extends javax.swing.JPanel {
                                 targetPart.setDamageTaken(targetPart.getDamageTaken() + enchDamage.intValue());
                                 targetPart.setDamageTakenNowTurn(targetPart.getDamageTakenNowTurn() + enchDamage.intValue());
                                 targetPart.seteDamageTakenNowTurn(targetPart.geteDamageTakenNowTurn(enchant.getValue()[1]) + enchDamage.intValue(), enchant.getValue()[1]);
-
+                                damageTypeIndex = EnumPhysicsMagic.getIndexById("ENCHANT");
+                                targetPart.setDamageNumNowTurn(targetPart.getDamageNumNowTurn(damageTypeIndex) + 1, damageTypeIndex);
+                                
                                 sb = new StringBuilder();
                                 sb.append("对").append(targetPart.getName()).append("造成").append(enchDamage).append("点").
                                         append(EnumType.getNameByIndex(enchant.getValue()[1])).append("属性追加伤害。");
@@ -1543,7 +1573,7 @@ public class BattleSimu extends javax.swing.JPanel {
                 case "HP_CUT":
                     for (PartInfo targetPart : realTargetParts) {
                         //Integer[] currentAttr = targetPart.getCurrentAttr();
-                        val = Long.parseLong(skillRole[18]) * targetPart.getCurrentAttr(EnumAttribute.getIndexById("HP")) / 100;
+                        val = Long.parseLong(skillRole[SKILL_ROLE_PARAM1]) * targetPart.getCurrentAttr(EnumAttribute.getIndexById("HP")) / 100;
                         if (val >= targetPart.getCurrentAttr(EnumAttribute.getIndexById("HP"))) {
                             val = targetPart.getCurrentAttr(EnumAttribute.getIndexById("HP")) - 1L;
                         }
@@ -1551,7 +1581,7 @@ public class BattleSimu extends javax.swing.JPanel {
                         targetPart.setDamageTaken(targetPart.getDamageTaken() + val.intValue());
                         targetPart.setDamageTakenNowTurn(targetPart.getDamageTakenNowTurn() + val.intValue());
                         sb = new StringBuilder();
-                        sb.append(getTargetName(realTargetParts)).append("扣除").append(Long.parseLong(skillRole[18])).append("%当前HP。\n");
+                        sb.append(getTargetName(realTargetParts)).append("扣除").append(Long.parseLong(skillRole[SKILL_ROLE_PARAM1])).append("%当前HP。\n");
                         txtBattleInfo.append(sb.toString());
                     }
                     break;
@@ -1562,9 +1592,9 @@ public class BattleSimu extends javax.swing.JPanel {
                     executeAttrChangeFixed(skillRole, cardLevel, chain, chainBoostVal, realTargetParts, true);
                     break;
                 case "HEAL_FIXED":
-                    attrVal = part.getCurrentAttr(EnumAttribute.getIndexById(skillRole[22]));
-                    val = Long.parseLong(skillRole[18]) + Long.parseLong(skillRole[19]) * cardLevel / 1000;
-                    val += Long.parseLong(skillRole[20]) * attrVal / 1000;
+                    attrVal = part.getCurrentAttr(EnumAttribute.getIndexById(skillRole[SKILL_ROLE_PARAM5]));
+                    val = Long.parseLong(skillRole[SKILL_ROLE_PARAM1]) + Long.parseLong(skillRole[SKILL_ROLE_PARAM2]) * cardLevel / 1000;
+                    val += Long.parseLong(skillRole[SKILL_ROLE_PARAM3]) * attrVal / 1000;
                     val = val * (100 + chainBoostVal * chain) / 100;
                     sb = new StringBuilder();
                     sb.append(getTargetName(realTargetParts)).append("回复").append(val).append("点HP。\n");
@@ -1588,11 +1618,11 @@ public class BattleSimu extends javax.swing.JPanel {
                     executeAttrChangeFixed(skillRole, cardLevel, chain, chainBoostVal, realTargetParts, false);
                     break;
                 case "REGENERATE_FIXED":
-                    attrVal = part.getCurrentAttr(EnumAttribute.getIndexById(skillRole[23]));
-                    val = Long.parseLong(skillRole[19]) + Long.parseLong(skillRole[20]) * cardLevel / 1000;
-                    val += Long.parseLong(skillRole[21]) * attrVal / 1000;
+                    attrVal = part.getCurrentAttr(EnumAttribute.getIndexById(skillRole[SKILL_ROLE_PARAM6]));
+                    val = Long.parseLong(skillRole[SKILL_ROLE_PARAM2]) + Long.parseLong(skillRole[SKILL_ROLE_PARAM3]) * cardLevel / 1000;
+                    val += Long.parseLong(skillRole[SKILL_ROLE_PARAM4]) * attrVal / 1000;
                     val = val * (100 + chainBoostVal * chain) / 100;
-                    buff = new BuffInfo(Integer.parseInt(skillRole[18]), turn, "REGENERATE", new Integer[]{val.intValue()}, "HEAL", true);
+                    buff = new BuffInfo(Integer.parseInt(skillRole[SKILL_ROLE_PARAM1]), turn, "REGENERATE", new Integer[]{val.intValue()}, "HEAL", true);
                     setBuffToParts(buff, realTargetParts);
                     break;
                 case "ATK_UP_BY_SELF_PARAM":
@@ -1602,7 +1632,7 @@ public class BattleSimu extends javax.swing.JPanel {
                     executeAttrChangeByParam(skillRole, part, cardLevel, chain, chainBoostVal, realTargetParts, true);
                     break;
                 case "HEAL_BY_SELF_PARAM":
-                    val = Long.parseLong(skillRole[19]) * part.getCurrentAttr(EnumAttribute.getIndexById(skillRole[18])) / 1000;
+                    val = Long.parseLong(skillRole[SKILL_ROLE_PARAM2]) * part.getCurrentAttr(EnumAttribute.getIndexById(skillRole[SKILL_ROLE_PARAM1])) / 1000;
                     sb = new StringBuilder();
                     sb.append(getTargetName(realTargetParts)).append("回复").append(val).append("点HP。\n");
                     txtBattleInfo.append(sb.toString());
@@ -1630,14 +1660,14 @@ public class BattleSimu extends javax.swing.JPanel {
                     executeAttrChangeByParam(skillRole, part, cardLevel, chain, chainBoostVal, realTargetParts, false);
                     break;
                 case "CRITICAL_UP":
-                    val = Long.parseLong(skillRole[19]);
-                    buff = new BuffInfo(Integer.parseInt(skillRole[18]), turn, "ATTR_CHANGE", new Integer[]{val.intValue(), EnumAttribute.getIndexById("CRIT")}, skillRole[6], true);
+                    val = Long.parseLong(skillRole[SKILL_ROLE_PARAM2]);
+                    buff = new BuffInfo(Integer.parseInt(skillRole[SKILL_ROLE_PARAM1]), turn, "ATTR_CHANGE", new Integer[]{val.intValue(), EnumAttribute.getIndexById("CRIT")}, skillRole[SKILL_ROLE_FUNCTION_COL], true);
                     setBuffToParts(buff, realTargetParts);
                     break;
                 case "HEAL_BY_TARGET_MAXHP":
                     sb = new StringBuilder();
                     for (PartInfo targetPart : realTargetParts) {
-                        val = Long.parseLong(skillRole[18]) * targetPart.getCurrentAttr(EnumAttribute.getIndexById("MAX_HP")) / 1000;
+                        val = Long.parseLong(skillRole[SKILL_ROLE_PARAM1]) * targetPart.getCurrentAttr(EnumAttribute.getIndexById("MAX_HP")) / 1000;
                         if (!computeHealing(targetPart, val)) {
                             sb.append(targetPart.getName()).append("，");
                         }
@@ -1664,15 +1694,15 @@ public class BattleSimu extends javax.swing.JPanel {
                     executeSkillDot(skillRole, cardLevel, part, chainBoostVal, chain, realTargetParts);
                     break;
                 case "WEAKNESS":
-                    val = Long.parseLong(skillRole[19]) / 10;   // Change ‰ to %.
-                    buff = new BuffInfo(Integer.parseInt(skillRole[18]), turn, "WEAKNESS", new Integer[]{val.intValue()}, skillRole[6], false);
+                    val = Long.parseLong(skillRole[SKILL_ROLE_PARAM2]) / 10;   // Change ‰ to %.
+                    buff = new BuffInfo(Integer.parseInt(skillRole[SKILL_ROLE_PARAM1]), turn, "WEAKNESS", new Integer[]{val.intValue()}, skillRole[SKILL_ROLE_FUNCTION_COL], false);
                     setBuffToParts(buff, realTargetParts);
                     break;
                 case "CARD_TRAP_DAMAGE":
                     Boolean noEffect = true;
-                    Integer minCardNum = Integer.parseInt(skillRole[19]);
-                    Integer maxCardNum = Integer.parseInt(skillRole[20]);
-                    val = Long.parseLong(skillRole[21]);
+                    Integer minCardNum = Integer.parseInt(skillRole[SKILL_ROLE_PARAM2]);
+                    Integer maxCardNum = Integer.parseInt(skillRole[SKILL_ROLE_PARAM3]);
+                    val = Long.parseLong(skillRole[SKILL_ROLE_PARAM4]);
                     for (PartInfo targetPart : realTargetParts) {
                         List<Integer> availPos = new ArrayList<>();
                         ArthurInfo arthur = (ArthurInfo) targetPart;
@@ -1685,7 +1715,7 @@ public class BattleSimu extends javax.swing.JPanel {
                         Integer[] vals = new Integer[6];
                         System.arraycopy(applyPos, 0, vals, 0, applyPos.length);
                         vals[5] = val.intValue();
-                        buff = new BuffInfo(Integer.parseInt(skillRole[18]), turn, "CARD_TRAP_DAMAGE", vals, skillRole[6], false);
+                        buff = new BuffInfo(Integer.parseInt(skillRole[SKILL_ROLE_PARAM1]), turn, "CARD_TRAP_DAMAGE", vals, skillRole[SKILL_ROLE_FUNCTION_COL], false);
                         ArrayList<PartInfo> newList = new ArrayList<>();
                         newList.add(targetPart);
                         if (setBuffToParts(buff, newList)) {
@@ -1693,7 +1723,7 @@ public class BattleSimu extends javax.swing.JPanel {
                         }
                     }
                     sb = new StringBuilder();
-                    sb.append(Integer.parseInt(skillRole[18])).append("回合间，").append(getTargetName(realTargetParts)).
+                    sb.append(Integer.parseInt(skillRole[SKILL_ROLE_PARAM1])).append("回合间，").append(getTargetName(realTargetParts)).
                             append("的卡牌陷阱").append(minCardNum);
                     if (!minCardNum.equals(maxCardNum)) {
                         sb.append("～").append(maxCardNum);
@@ -1707,16 +1737,16 @@ public class BattleSimu extends javax.swing.JPanel {
                     break;
                 case "CARD_SEAL":
                     noEffect = true;
-                    Integer minRound = Integer.parseInt(skillRole[18]);
-                    Integer maxRound = Integer.parseInt(skillRole[19]);
-                    minCardNum = Integer.parseInt(skillRole[20]);
-                    maxCardNum = Integer.parseInt(skillRole[21]);
+                    Integer minRound = Integer.parseInt(skillRole[SKILL_ROLE_PARAM1]);
+                    Integer maxRound = Integer.parseInt(skillRole[SKILL_ROLE_PARAM2]);
+                    minCardNum = Integer.parseInt(skillRole[SKILL_ROLE_PARAM3]);
+                    maxCardNum = Integer.parseInt(skillRole[SKILL_ROLE_PARAM4]);
                     Long round = Math.round(Math.random() * (maxRound - minRound + 1) - 0.5) + minRound;
-                    String categoryFilter = skillRole[22];
-                    String typeFilter = skillRole[23];
-                    String minCost = skillRole[24];
-                    String maxCost = skillRole[25];
-                    Integer filterCondition = Integer.parseInt(skillRole[26]);
+                    String categoryFilter = skillRole[SKILL_ROLE_PARAM5];
+                    String typeFilter = skillRole[SKILL_ROLE_PARAM6];
+                    String minCost = skillRole[SKILL_ROLE_PARAM7];
+                    String maxCost = skillRole[SKILL_ROLE_PARAM8];
+                    Integer filterCondition = Integer.parseInt(skillRole[SKILL_ROLE_PARAM9]);
                     for (PartInfo targetPart : realTargetParts) {
                         List<Integer> availPos = new ArrayList<>();
                         ArthurInfo arthur = (ArthurInfo) targetPart;
@@ -1744,7 +1774,7 @@ public class BattleSimu extends javax.swing.JPanel {
                             }
                         }
                         Integer[] applyPos = getRandomBuffApplyPositions(availPos, minCardNum, maxCardNum);
-                        buff = new BuffInfo(round.intValue(), turn, "CARD_SEAL", applyPos, skillRole[6], false);
+                        buff = new BuffInfo(round.intValue(), turn, "CARD_SEAL", applyPos, skillRole[SKILL_ROLE_FUNCTION_COL], false);
                         ArrayList<PartInfo> newList = new ArrayList<>();
                         newList.add(targetPart);
                         if (setBuffToParts(buff, newList)) {
@@ -1790,116 +1820,116 @@ public class BattleSimu extends javax.swing.JPanel {
                                 availPos.add(i);
                             }
                         }
-                        minCardNum = Integer.parseInt(skillRole[19]);
-                        maxCardNum = Integer.parseInt(skillRole[20]);
+                        minCardNum = Integer.parseInt(skillRole[SKILL_ROLE_PARAM2]);
+                        maxCardNum = Integer.parseInt(skillRole[SKILL_ROLE_PARAM3]);
                         Integer[] darkPos = getRandomBuffApplyPositions(availPos, minCardNum, maxCardNum);
-                        buff = new BuffInfo(Integer.parseInt(skillRole[18]), turn, "DARKNESS", darkPos, "DARKNESS", false);
+                        buff = new BuffInfo(Integer.parseInt(skillRole[SKILL_ROLE_PARAM1]), turn, "DARKNESS", darkPos, "DARKNESS", false);
                         ArrayList<PartInfo> newList = new ArrayList<>();
                         newList.add(targetPart);
                         setBuffToParts(buff, newList);
                     }
                     break;
                 case "DARKNESS_APPOINT":
-                    buff = new BuffInfo(Integer.parseInt(skillRole[18]), turn, "DARKNESS",
-                            new Integer[]{Integer.parseInt(skillRole[19]), Integer.parseInt(skillRole[19]), Integer.parseInt(skillRole[19]),
-                                Integer.parseInt(skillRole[19]), Integer.parseInt(skillRole[19])}, "DARKNESS", false);
+                    buff = new BuffInfo(Integer.parseInt(skillRole[SKILL_ROLE_PARAM1]), turn, "DARKNESS",
+                            new Integer[]{Integer.parseInt(skillRole[SKILL_ROLE_PARAM2]), Integer.parseInt(skillRole[SKILL_ROLE_PARAM2]), Integer.parseInt(skillRole[SKILL_ROLE_PARAM2]),
+                                Integer.parseInt(skillRole[SKILL_ROLE_PARAM2]), Integer.parseInt(skillRole[SKILL_ROLE_PARAM2])}, "DARKNESS", false);
                     setBuffToParts(buff, realTargetParts);
                     break;
                 case "HEAL_REVERSE":
-                    buff = new BuffInfo(Integer.parseInt(skillRole[18]), turn, "HEAL_REVERSE", null, skillRole[6], false);
+                    buff = new BuffInfo(Integer.parseInt(skillRole[SKILL_ROLE_PARAM1]), turn, "HEAL_REVERSE", null, skillRole[SKILL_ROLE_FUNCTION_COL], false);
                     setBuffToParts(buff, realTargetParts);
                     break;
                 case "BUFF_RELEASE":
-                    buff = new BuffInfo(0, turn, "RELEASE", null, skillRole[6], true);
+                    buff = new BuffInfo(0, turn, "RELEASE", null, skillRole[SKILL_ROLE_FUNCTION_COL], true);
                     setBuffToParts(buff, realTargetParts);
                     break;
                 case "BUFF_RELEASE_ONE":
                     Integer[] values;
-                    Integer buff1 = EnumBuff.getIndexById(skillRole[20]);
-                    Integer buff2 = EnumBuff.getIndexById(skillRole[21]);
+                    Integer buff1 = EnumBuff.getIndexById(skillRole[SKILL_ROLE_PARAM3]);
+                    Integer buff2 = EnumBuff.getIndexById(skillRole[SKILL_ROLE_PARAM4]);
                     if (buff2.equals(buff1) || buff2 == 0) {
                         values = new Integer[]{buff1};
                     } else {
                         values = new Integer[]{buff1, buff2};
                     }
-                    buff = new BuffInfo(0, turn, "RELEASE", values, skillRole[6], true);
+                    buff = new BuffInfo(0, turn, "RELEASE", values, skillRole[SKILL_ROLE_FUNCTION_COL], true);
                     setBuffToParts(buff, realTargetParts);
                     break;
                 case "DEBUFF_RELEASE":
-                    buff = new BuffInfo(0, turn, "RELEASE", null, skillRole[6], false);
+                    buff = new BuffInfo(0, turn, "RELEASE", null, skillRole[SKILL_ROLE_FUNCTION_COL], false);
                     setBuffToParts(buff, realTargetParts);
                     break;
                 case "DEBUFF_RELEASE_ONE":
-                    buff1 = EnumBuff.getIndexById(skillRole[20]);
-                    buff2 = EnumBuff.getIndexById(skillRole[21]);
+                    buff1 = EnumBuff.getIndexById(skillRole[SKILL_ROLE_PARAM3]);
+                    buff2 = EnumBuff.getIndexById(skillRole[SKILL_ROLE_PARAM4]);
                     if (buff2.equals(buff1) || buff2 == 0) {
                         values = new Integer[]{buff1};
                     } else {
                         values = new Integer[]{buff1, buff2};
                     }
-                    buff = new BuffInfo(0, turn, "RELEASE", values, skillRole[6], false);
+                    buff = new BuffInfo(0, turn, "RELEASE", values, skillRole[SKILL_ROLE_FUNCTION_COL], false);
                     setBuffToParts(buff, realTargetParts);
                     break;
                 case "CARD_SEAL_REGIST":
-                    val = Long.parseLong(skillRole[19]);
-                    buff = new BuffInfo(Integer.parseInt(skillRole[18]), turn, "REGIST", new Integer[]{val.intValue()}, skillRole[6], true);
+                    val = Long.parseLong(skillRole[SKILL_ROLE_PARAM2]);
+                    buff = new BuffInfo(Integer.parseInt(skillRole[SKILL_ROLE_PARAM1]), turn, "REGIST", new Integer[]{val.intValue()}, skillRole[SKILL_ROLE_FUNCTION_COL], true);
                     setBuffToParts(buff, realTargetParts);
                     break;
                 case "DARKNESS_REGIST":
-                    val = Long.parseLong(skillRole[19]);
-                    buff = new BuffInfo(Integer.parseInt(skillRole[18]), turn, "REGIST", new Integer[]{val.intValue()}, skillRole[6], true);
+                    val = Long.parseLong(skillRole[SKILL_ROLE_PARAM2]);
+                    buff = new BuffInfo(Integer.parseInt(skillRole[SKILL_ROLE_PARAM1]), turn, "REGIST", new Integer[]{val.intValue()}, skillRole[SKILL_ROLE_FUNCTION_COL], true);
                     setBuffToParts(buff, realTargetParts);
                     break;
                 case "COVERING":
-                    val = Long.parseLong(skillRole[19]) / 10;
-                    buff = new BuffInfo(Integer.parseInt(skillRole[18]), turn, "COVERING", new Integer[]{val.intValue()}, skillRole[6], true);
+                    val = Long.parseLong(skillRole[SKILL_ROLE_PARAM2]) / 10;
+                    buff = new BuffInfo(Integer.parseInt(skillRole[SKILL_ROLE_PARAM1]), turn, "COVERING", new Integer[]{val.intValue()}, skillRole[SKILL_ROLE_FUNCTION_COL], true);
                     setBuffToParts(buff, realTargetParts);
                     break;
                 case "STAN":
-                    val = Long.parseLong(skillRole[19]);
-                    buff = new BuffInfo(Integer.parseInt(skillRole[18]), turn, "STAN", new Integer[]{val.intValue()}, skillRole[6], false);
+                    val = Long.parseLong(skillRole[SKILL_ROLE_PARAM2]);
+                    buff = new BuffInfo(Integer.parseInt(skillRole[SKILL_ROLE_PARAM1]), turn, "STAN", new Integer[]{val.intValue()}, skillRole[SKILL_ROLE_FUNCTION_COL], false);
                     setBuffToParts(buff, realTargetParts);
                     break;
                 case "ATTR_SEE":
-                    buff = new BuffInfo(Integer.parseInt(skillRole[18]), turn, "TYPE_HIDE", null, skillRole[6], false);
+                    buff = new BuffInfo(Integer.parseInt(skillRole[SKILL_ROLE_PARAM1]), turn, "TYPE_HIDE", null, skillRole[SKILL_ROLE_FUNCTION_COL], false);
                     setBuffToParts(buff, realTargetParts);
                     break;
                 case "ATTR_HIDE":
-                    buff = new BuffInfo(Integer.parseInt(skillRole[18]), turn, "TYPE_HIDE", null, skillRole[6], true);
+                    buff = new BuffInfo(Integer.parseInt(skillRole[SKILL_ROLE_PARAM1]), turn, "TYPE_HIDE", null, skillRole[SKILL_ROLE_FUNCTION_COL], true);
                     setBuffToParts(buff, realTargetParts);
                     break;
                 case "REWRITE":
-                    buff = new BuffInfo(Integer.parseInt(skillRole[18]), turn, "REWRITE", new Integer[]{EnumType.getIndexById(skillRole[19])}, skillRole[6], true);
+                    buff = new BuffInfo(Integer.parseInt(skillRole[SKILL_ROLE_PARAM1]), turn, "REWRITE", new Integer[]{EnumType.getIndexById(skillRole[SKILL_ROLE_PARAM2])}, skillRole[SKILL_ROLE_FUNCTION_COL], true);
                     setBuffToParts(buff, realTargetParts);
                     break;
                 case "DEAL_BONUS":  // Default 1 round
-                    val = Long.parseLong(skillRole[18]);
-                    buff = new BuffInfo(1, turn, "DEAL", new Integer[]{val.intValue()}, skillRole[6], true);
+                    val = Long.parseLong(skillRole[SKILL_ROLE_PARAM1]);
+                    buff = new BuffInfo(1, turn, "DEAL", new Integer[]{val.intValue()}, skillRole[SKILL_ROLE_FUNCTION_COL], true);
                     setBuffToParts(buff, realTargetParts);
                     break;
                 case "DEAL_PENALTY":
-                    val = Long.parseLong(skillRole[18]) * (-1);
-                    buff = new BuffInfo(1, turn, "DEAL", new Integer[]{val.intValue()}, skillRole[6], false);
+                    val = Long.parseLong(skillRole[SKILL_ROLE_PARAM1]) * (-1);
+                    buff = new BuffInfo(1, turn, "DEAL", new Integer[]{val.intValue()}, skillRole[SKILL_ROLE_FUNCTION_COL], false);
                     setBuffToParts(buff, realTargetParts);
                     break;
                 case "DEAL_PENALTY_TURN_APPOINT":
-                    val = Long.parseLong(skillRole[19]) * (-1);
-                    buff = new BuffInfo(Integer.parseInt(skillRole[18]), turn, "DEAL", new Integer[]{val.intValue()}, "DEAL_PENALTY", false);
+                    val = Long.parseLong(skillRole[SKILL_ROLE_PARAM2]) * (-1);
+                    buff = new BuffInfo(Integer.parseInt(skillRole[SKILL_ROLE_PARAM1]), turn, "DEAL", new Integer[]{val.intValue()}, "DEAL_PENALTY", false);
                     setBuffToParts(buff, realTargetParts);
                     break;
                 case "ENEMY_AI_TRIGGER_FLAG_SET":
-                    enemyTriggerAiFlag.put(skillRole[18], Integer.parseInt(skillRole[19]));
+                    enemyTriggerAiFlag.put(skillRole[SKILL_ROLE_PARAM1], Integer.parseInt(skillRole[SKILL_ROLE_PARAM2]));
                     break;
                 case "ATTACK_BARRIER":
-                    buff = new BuffInfo(Integer.parseInt(skillRole[18]), turn, "ATTACK_BARRIER",
-                            new Integer[]{Integer.parseInt(skillRole[19]), Integer.parseInt(skillRole[21]), EnumPhysicsMagic.getIndexById(skillRole[22])}, skillRole[6], false);
+                    buff = new BuffInfo(Integer.parseInt(skillRole[SKILL_ROLE_PARAM1]), turn, "ATTACK_BARRIER",
+                            new Integer[]{Integer.parseInt(skillRole[SKILL_ROLE_PARAM2]), Integer.parseInt(skillRole[SKILL_ROLE_PARAM4]), EnumPhysicsMagic.getIndexById(skillRole[SKILL_ROLE_PARAM5])}, skillRole[SKILL_ROLE_FUNCTION_COL], false);
                     setBuffToParts(buff, realTargetParts);
                     break;
                 case "DESTRUCT":
                     for (PartInfo targetPart : realTargetParts) {
                         //Integer[] currentAttr = targetPart.getCurrentAttr();
-                        val = Long.parseLong(skillRole[18]) * targetPart.getCurrentAttr(EnumAttribute.getIndexById("HP")) / 100;
-                        if (!skillRole[18].equals("100") && val.intValue() == targetPart.getCurrentAttr(EnumAttribute.getIndexById("HP"))) {
+                        val = Long.parseLong(skillRole[SKILL_ROLE_PARAM1]) * targetPart.getCurrentAttr(EnumAttribute.getIndexById("HP")) / 100;
+                        if (!skillRole[SKILL_ROLE_PARAM1].equals("100") && val.intValue() == targetPart.getCurrentAttr(EnumAttribute.getIndexById("HP"))) {
                             val = targetPart.getCurrentAttr(EnumAttribute.getIndexById("HP")).longValue() - 1;
                         }
                         targetPart.changeCurrentAttr(-val.intValue(), EnumAttribute.getIndexById("HP"));
@@ -1912,27 +1942,27 @@ public class BattleSimu extends javax.swing.JPanel {
                         if (val == 0) {
                             sb.append(getTargetName(realTargetParts)).append("破坏！\n");
                         } else {
-                            sb.append(getTargetName(realTargetParts)).append("破坏，损失").append(skillRole[18]).append("％HP。\n");
+                            sb.append(getTargetName(realTargetParts)).append("破坏，损失").append(skillRole[SKILL_ROLE_PARAM1]).append("％HP。\n");
                         }
                         txtBattleInfo.append(sb.toString());
                     }
                     break;
                 case "COST_BLOCK":
-                    buff = new BuffInfo(Integer.parseInt(skillRole[18]), turn, "COST_BLOCK", new Integer[]{Integer.parseInt(skillRole[19])}, "COST_BLOCK", false);
+                    buff = new BuffInfo(Integer.parseInt(skillRole[SKILL_ROLE_PARAM1]), turn, "COST_BLOCK", new Integer[]{Integer.parseInt(skillRole[SKILL_ROLE_PARAM2])}, "COST_BLOCK", false);
                     setBuffToParts(buff, realTargetParts);
                     break;
                 case "ENCHANT":
-                    val = Long.parseLong(skillRole[19]) + Long.parseLong(skillRole[22]) * cardLevel;
+                    val = Long.parseLong(skillRole[SKILL_ROLE_PARAM2]) + Long.parseLong(skillRole[SKILL_ROLE_PARAM5]) * cardLevel;
                     val = val * (100 + chainBoostVal * chain) / 100;
-                    buff = new BuffInfo(Integer.parseInt(skillRole[18]), turn, "ENCHANT", new Integer[]{val.intValue(), EnumType.getIndexById(skillRole[23])}, "ENCHANT", true);
+                    buff = new BuffInfo(Integer.parseInt(skillRole[SKILL_ROLE_PARAM1]), turn, "ENCHANT", new Integer[]{val.intValue(), EnumType.getIndexById(skillRole[SKILL_ROLE_PARAM6])}, "ENCHANT", true);
                     setBuffToParts(buff, realTargetParts);
                     break;
                 case "DOT_VALUE_UP":    // NOT TESTED YET.
-                    buff = new BuffInfo(Integer.parseInt(skillRole[18]), turn, "DOT_VALUE_UP", new Integer[]{Integer.parseInt(skillRole[19]), EnumBuff.getIndexById(skillRole[23])}, "DOT_VALUE_UP", true);
+                    buff = new BuffInfo(Integer.parseInt(skillRole[SKILL_ROLE_PARAM1]), turn, "DOT_VALUE_UP", new Integer[]{Integer.parseInt(skillRole[SKILL_ROLE_PARAM2]), EnumBuff.getIndexById(skillRole[SKILL_ROLE_PARAM6])}, "DOT_VALUE_UP", true);
                     setBuffToParts(buff, realTargetParts);
                     break;
                 default:
-                    txtBattleInfo.append("Unrecognized: " + skillRole[6] + "\n");
+                    txtBattleInfo.append("Unrecognized: " + skillRole[SKILL_ROLE_FUNCTION_COL] + "\n");
                     break;
             }
         }
@@ -2002,14 +2032,14 @@ public class BattleSimu extends javax.swing.JPanel {
         Long val;
         BuffInfo buff;
         Long spRate = 0L, spCardLevelRate = 0L;
-        if (skillRole.length > 22 && skillRole[22].matches("[\\d]+")) {
-            spRate = Long.parseLong(skillRole[22]);
+        if (skillRole.length > 22 && skillRole[SKILL_ROLE_PARAM5].matches("[\\d]+")) {
+            spRate = Long.parseLong(skillRole[SKILL_ROLE_PARAM5]);
         }
-        if (skillRole.length > 23 && skillRole[23].matches("[\\d]+")) {
-            spCardLevelRate = Long.parseLong(skillRole[23]);
+        if (skillRole.length > 23 && skillRole[SKILL_ROLE_PARAM6].matches("[\\d]+")) {
+            spCardLevelRate = Long.parseLong(skillRole[SKILL_ROLE_PARAM6]);
         }
-        Integer attrVal = part.getCurrentAttr(EnumAttribute.getIndexById(skillRole[20]));
-        val = (Long.parseLong(skillRole[21]) + spRate) * attrVal / 1000;
+        Integer attrVal = part.getCurrentAttr(EnumAttribute.getIndexById(skillRole[SKILL_ROLE_PARAM3]));
+        val = (Long.parseLong(skillRole[SKILL_ROLE_PARAM4]) + spRate) * attrVal / 1000;
         val += spCardLevelRate * cardLevel;
         log.debug(spCardLevelRate);
         log.debug(cardLevel);
@@ -2017,40 +2047,40 @@ public class BattleSimu extends javax.swing.JPanel {
         if (!isBuff) {
             val = -val;
         }
-        String releaseName = skillRole[6].substring(0, skillRole[6].lastIndexOf("SELF")) + skillRole[19];
-        buff = new BuffInfo(Integer.parseInt(skillRole[18]), turn, "ATTR_CHANGE", new Integer[]{val.intValue(),
-            EnumAttribute.getIndexById(skillRole[19])}, releaseName, isBuff);
+        String releaseName = skillRole[SKILL_ROLE_FUNCTION_COL].substring(0, skillRole[SKILL_ROLE_FUNCTION_COL].lastIndexOf("SELF")) + skillRole[SKILL_ROLE_PARAM2];
+        buff = new BuffInfo(Integer.parseInt(skillRole[SKILL_ROLE_PARAM1]), turn, "ATTR_CHANGE", new Integer[]{val.intValue(),
+            EnumAttribute.getIndexById(skillRole[SKILL_ROLE_PARAM2])}, releaseName, isBuff);
         setBuffToParts(buff, realTargetParts);
     }
 
     private void executeAttrChangeFixed(String[] skillRole, Integer cardLevel, Integer chain, Long chainBoostVal, List<PartInfo> realTargetParts, boolean isBuff) {
         Long val;
         BuffInfo buff;
-        val = Long.parseLong(skillRole[20]) * (Long.parseLong(skillRole[21]) + Long.parseLong(skillRole[22]) * cardLevel) / 1000;
+        val = Long.parseLong(skillRole[SKILL_ROLE_PARAM3]) * (Long.parseLong(skillRole[SKILL_ROLE_PARAM4]) + Long.parseLong(skillRole[SKILL_ROLE_PARAM5]) * cardLevel) / 1000;
         val += chain * chainBoostVal;  // 0 = 1Chain, 3 = 4Chain.
         if (!isBuff) {
             val = -val;
         }
-        String releaseName = skillRole[6].substring(0, skillRole[6].lastIndexOf("_")) + "_BY_" + skillRole[19];
-        buff = new BuffInfo(Integer.parseInt(skillRole[18]), turn, "ATTR_CHANGE", new Integer[]{val.intValue(),
-            EnumAttribute.getIndexById(skillRole[19])}, releaseName, isBuff);
+        String releaseName = skillRole[SKILL_ROLE_FUNCTION_COL].substring(0, skillRole[SKILL_ROLE_FUNCTION_COL].lastIndexOf("_")) + "_BY_" + skillRole[SKILL_ROLE_PARAM2];
+        buff = new BuffInfo(Integer.parseInt(skillRole[SKILL_ROLE_PARAM1]), turn, "ATTR_CHANGE", new Integer[]{val.intValue(),
+            EnumAttribute.getIndexById(skillRole[SKILL_ROLE_PARAM2])}, releaseName, isBuff);
         setBuffToParts(buff, realTargetParts);
     }
 
     private void executeSkillDot(String[] skillRole, Integer cardLevel, PartInfo part, Long chainBoostVal, Integer chain, List<PartInfo> realTargetParts) {
         Long val;
         BuffInfo buff;
-        Integer attrVal = part.getCurrentAttr(EnumAttribute.getIndexById(skillRole[25]));
-        val = Long.parseLong(skillRole[20]) + Long.parseLong(skillRole[21]) + Long.parseLong(skillRole[22]) * cardLevel / 1000;
-        val += Long.parseLong(skillRole[23]) * attrVal / 1000;
+        Integer attrVal = part.getCurrentAttr(EnumAttribute.getIndexById(skillRole[SKILL_ROLE_PARAM8]));
+        val = Long.parseLong(skillRole[SKILL_ROLE_PARAM3]) + Long.parseLong(skillRole[SKILL_ROLE_PARAM4]) + Long.parseLong(skillRole[SKILL_ROLE_PARAM5]) * cardLevel / 1000;
+        val += Long.parseLong(skillRole[SKILL_ROLE_PARAM6]) * attrVal / 1000;
         val = val * (100 + chainBoostVal * chain) / 100;
-        String atkType = EnumType.getIdByDotId(skillRole[6]);
+        String atkType = EnumType.getIdByDotId(skillRole[SKILL_ROLE_FUNCTION_COL]);
         Integer index = EnumType.getIndexById(atkType);
         for (PartInfo targetPart : realTargetParts) {
             if (targetPart.isArthur()) {
-                buff = new BuffInfo(Integer.parseInt(skillRole[18]), turn, "DOT", new Integer[]{val.intValue(), index}, skillRole[6], false);
+                buff = new BuffInfo(Integer.parseInt(skillRole[SKILL_ROLE_PARAM1]), turn, "DOT", new Integer[]{val.intValue(), index}, skillRole[SKILL_ROLE_FUNCTION_COL], false);
             } else {
-                buff = new BuffInfo(Integer.parseInt(skillRole[18]), turn, "DOT", new Integer[]{val.intValue(), index}, skillRole[6], false);
+                buff = new BuffInfo(Integer.parseInt(skillRole[SKILL_ROLE_PARAM1]), turn, "DOT", new Integer[]{val.intValue(), index}, skillRole[SKILL_ROLE_FUNCTION_COL], false);
             }
             ArrayList<PartInfo> newList = new ArrayList<>();
             newList.add(targetPart);
@@ -2996,7 +3026,8 @@ public class BattleSimu extends javax.swing.JPanel {
             refreshTargetUI(playedTargets);
             setOperationExceptTargetSelection(index, false);
         } else // Try cancel a card.
-         if (card.getTarget() != null) {
+        {
+            if (card.getTarget() != null) {
                 card.setTarget(null);
                 card.setIsPlayed(false);
                 Integer playedOrder = card.getPlayedOrder();
@@ -3025,6 +3056,7 @@ public class BattleSimu extends javax.swing.JPanel {
                 refreshTargetUI(null);
                 refreshCardUI(arIndex);
             }
+        }
     }
 
     // Complete the play-card action (target selected).
@@ -3181,16 +3213,16 @@ public class BattleSimu extends javax.swing.JPanel {
         Integer atkOpVal = 0;
         List<String[]> skillRoleList = skillRoleMap.get(skill[27]);
         for (String[] skillRole : skillRoleList) {
-            String function = skillRole[6];
+            String function = skillRole[SKILL_ROLE_FUNCTION_COL];
             switch (function) {
                 case "REVIVE":
                     break;
                 case "ATTACK_AA":
-                    val = Long.parseLong(skillRole[18]) + Long.parseLong(skillRole[19]) * cardLevel / 1000;
-                    val += Long.parseLong(skillRole[20]) * arthur.getCurrentAttr(EnumAttribute.getIndexById(skillRole[23])) / 1000;
-                    log.debug("base: " + skillRole[18] + " | per level: " + skillRole[19] + " | cardLevel: " + cardLevel
-                            + " | attr rate: " + Long.parseLong(skillRole[20]) + " | attr val: "
-                            + arthur.getCurrentAttr(EnumAttribute.getIndexById(skillRole[23])) + " | final val: " + val);
+                    val = Long.parseLong(skillRole[SKILL_ROLE_PARAM1]) + Long.parseLong(skillRole[SKILL_ROLE_PARAM2]) * cardLevel / 1000;
+                    val += Long.parseLong(skillRole[SKILL_ROLE_PARAM3]) * arthur.getCurrentAttr(EnumAttribute.getIndexById(skillRole[SKILL_ROLE_PARAM6])) / 1000;
+                    log.debug("base: " + skillRole[SKILL_ROLE_PARAM1] + " | per level: " + skillRole[SKILL_ROLE_PARAM2] + " | cardLevel: " + cardLevel
+                            + " | attr rate: " + Long.parseLong(skillRole[SKILL_ROLE_PARAM3]) + " | attr val: "
+                            + arthur.getCurrentAttr(EnumAttribute.getIndexById(skillRole[SKILL_ROLE_PARAM6])) + " | final val: " + val);
                     return val.intValue() + atkOpVal;
                 case "HP_CUT":
                     break;
@@ -3199,51 +3231,51 @@ public class BattleSimu extends javax.swing.JPanel {
                 case "ATK_OP_PIERCING":
                     break;
                 case "ATK_UP_FIXED":
-                    val = Long.parseLong(skillRole[20]) * (Long.parseLong(skillRole[21]) + Long.parseLong(skillRole[22]) * cardLevel) / 1000;
+                    val = Long.parseLong(skillRole[SKILL_ROLE_PARAM3]) * (Long.parseLong(skillRole[SKILL_ROLE_PARAM4]) + Long.parseLong(skillRole[SKILL_ROLE_PARAM5]) * cardLevel) / 1000;
                     return val.intValue();
                 case "DEF_UP_FIXED":
-                    val = Long.parseLong(skillRole[20]) * (Long.parseLong(skillRole[21]) + Long.parseLong(skillRole[22]) * cardLevel) / 1000;
+                    val = Long.parseLong(skillRole[SKILL_ROLE_PARAM3]) * (Long.parseLong(skillRole[SKILL_ROLE_PARAM4]) + Long.parseLong(skillRole[SKILL_ROLE_PARAM5]) * cardLevel) / 1000;
                     return val.intValue();
                 case "HEAL_FIXED":
-                    val = Long.parseLong(skillRole[18]) + Long.parseLong(skillRole[19]) * cardLevel / 1000;
-                    val += Long.parseLong(skillRole[20]) * arthur.getCurrentAttr(EnumAttribute.getIndexById(skillRole[22])) / 1000;
+                    val = Long.parseLong(skillRole[SKILL_ROLE_PARAM1]) + Long.parseLong(skillRole[SKILL_ROLE_PARAM2]) * cardLevel / 1000;
+                    val += Long.parseLong(skillRole[SKILL_ROLE_PARAM3]) * arthur.getCurrentAttr(EnumAttribute.getIndexById(skillRole[SKILL_ROLE_PARAM5])) / 1000;
                     return val.intValue();
                 case "ATK_BREAK_FIXED":
-                    val = Long.parseLong(skillRole[20]) * (Long.parseLong(skillRole[21]) + Long.parseLong(skillRole[22]) * cardLevel) / 1000;
+                    val = Long.parseLong(skillRole[SKILL_ROLE_PARAM3]) * (Long.parseLong(skillRole[SKILL_ROLE_PARAM4]) + Long.parseLong(skillRole[SKILL_ROLE_PARAM5]) * cardLevel) / 1000;
                     return val.intValue();
                 case "GUARD_BREAK_FIXED":
-                    val = Long.parseLong(skillRole[20]) * (Long.parseLong(skillRole[21]) + Long.parseLong(skillRole[22]) * cardLevel) / 1000;
+                    val = Long.parseLong(skillRole[SKILL_ROLE_PARAM3]) * (Long.parseLong(skillRole[SKILL_ROLE_PARAM4]) + Long.parseLong(skillRole[SKILL_ROLE_PARAM5]) * cardLevel) / 1000;
                     return val.intValue();
                 case "REGENERATE_FIXED":
-                    val = Long.parseLong(skillRole[19]) + Long.parseLong(skillRole[20]) * cardLevel / 1000;
-                    val += Long.parseLong(skillRole[21]) * arthur.getCurrentAttr(EnumAttribute.getIndexById(skillRole[23])) / 1000;
+                    val = Long.parseLong(skillRole[SKILL_ROLE_PARAM2]) + Long.parseLong(skillRole[SKILL_ROLE_PARAM3]) * cardLevel / 1000;
+                    val += Long.parseLong(skillRole[SKILL_ROLE_PARAM4]) * arthur.getCurrentAttr(EnumAttribute.getIndexById(skillRole[SKILL_ROLE_PARAM6])) / 1000;
                     return val.intValue();
                 case "ATK_UP_BY_SELF_PARAM":
-                    val = Long.parseLong(skillRole[21]) * arthur.getCurrentAttr(EnumAttribute.getIndexById(skillRole[20])) / 1000;
-                    val += Long.parseLong(skillRole[22]) + Integer.parseInt(skillRole[23]) * cardLevel;             // ？？
+                    val = Long.parseLong(skillRole[SKILL_ROLE_PARAM4]) * arthur.getCurrentAttr(EnumAttribute.getIndexById(skillRole[SKILL_ROLE_PARAM3])) / 1000;
+                    val += Long.parseLong(skillRole[SKILL_ROLE_PARAM5]) + Integer.parseInt(skillRole[SKILL_ROLE_PARAM6]) * cardLevel;             // ？？
                     return val.intValue();
                 case "DEF_UP_BY_SELF_PARAM":
-                    val = Long.parseLong(skillRole[21]) * arthur.getCurrentAttr(EnumAttribute.getIndexById(skillRole[20])) / 1000;
-                    val += Long.parseLong(skillRole[22]) + Integer.parseInt(skillRole[23]) * cardLevel;             // ？？
+                    val = Long.parseLong(skillRole[SKILL_ROLE_PARAM4]) * arthur.getCurrentAttr(EnumAttribute.getIndexById(skillRole[SKILL_ROLE_PARAM3])) / 1000;
+                    val += Long.parseLong(skillRole[SKILL_ROLE_PARAM5]) + Integer.parseInt(skillRole[SKILL_ROLE_PARAM6]) * cardLevel;             // ？？
                     return val.intValue();
                 case "HEAL_BY_SELF_PARAM":
                     break;
                 case "ATK_BREAK_BY_SELF_PARAM":
-                    val = Long.parseLong(skillRole[21]) * arthur.getCurrentAttr(EnumAttribute.getIndexById(skillRole[20])) / 1000;
-                    val += Long.parseLong(skillRole[22]) + Integer.parseInt(skillRole[23]) * cardLevel;             // ？？
+                    val = Long.parseLong(skillRole[SKILL_ROLE_PARAM4]) * arthur.getCurrentAttr(EnumAttribute.getIndexById(skillRole[SKILL_ROLE_PARAM3])) / 1000;
+                    val += Long.parseLong(skillRole[SKILL_ROLE_PARAM5]) + Integer.parseInt(skillRole[SKILL_ROLE_PARAM6]) * cardLevel;             // ？？
                     return val.intValue();
                 case "GUARD_BREAK_BY_SELF_PARAM":
                     break;
                 case "CRITICAL_UP":
                     break;
                 case "ATK_OP_DAMAGE_INCREASE":
-                    val = Long.parseLong(skillRole[20]) * arthur.getCurrentAttr(EnumAttribute.getIndexById(skillRole[22])) / 1000;
+                    val = Long.parseLong(skillRole[SKILL_ROLE_PARAM3]) * arthur.getCurrentAttr(EnumAttribute.getIndexById(skillRole[SKILL_ROLE_PARAM5])) / 1000;
                     atkOpVal += val.intValue();
                     break;
                 case "ATK_OP_REVENGE":
-                    val = Long.parseLong(skillRole[18]) * arthur.getDamageTaken() / 100;
-                    if (val > arthur.getCurrentAttr(EnumAttribute.getIndexById(skillRole[20])) * Long.parseLong(skillRole[21]) / 100) {
-                        val = arthur.getCurrentAttr(EnumAttribute.getIndexById(skillRole[20])) * Long.parseLong(skillRole[21]) / 100;
+                    val = Long.parseLong(skillRole[SKILL_ROLE_PARAM1]) * arthur.getDamageTaken() / 100;
+                    if (val > arthur.getCurrentAttr(EnumAttribute.getIndexById(skillRole[SKILL_ROLE_PARAM3])) * Long.parseLong(skillRole[SKILL_ROLE_PARAM4]) / 100) {
+                        val = arthur.getCurrentAttr(EnumAttribute.getIndexById(skillRole[SKILL_ROLE_PARAM3])) * Long.parseLong(skillRole[SKILL_ROLE_PARAM4]) / 100;
                     }
                     atkOpVal += val.intValue();
                     break;
@@ -3286,7 +3318,7 @@ public class BattleSimu extends javax.swing.JPanel {
                 case "DARKNESS_REGIST":
                     break;
                 case "COVERING":
-                    return Integer.parseInt(skillRole[19]) / 10;
+                    return Integer.parseInt(skillRole[SKILL_ROLE_PARAM2]) / 10;
                 case "STAN":
                     break;
                 case "ATK_OP_ATTR_RATE_DOWN_INVALID":
@@ -3710,10 +3742,11 @@ public class BattleSimu extends javax.swing.JPanel {
         }
         btnSwitch.setEnabled(!halt);
         btnEndTurn.setEnabled(!halt);
+        btnStartAgain.setEnabled(!halt);
     }
 
     private void startAgain() {
-        if (JOptionPane.showConfirmDialog(this, "确定要返回战斗准备界面吗？", "提醒", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE)
+        if (JOptionPane.showConfirmDialog(this, "确定要重新开始吗？", "提醒", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE)
                 == JOptionPane.YES_OPTION) {
             enemyList = ((BattlePrepare) UIUtil.getBattlePrepare()).prepareEnemy(enemyPartyId);
             arthurList = ((BattlePrepare) UIUtil.getBattlePrepare()).prepareArthur();

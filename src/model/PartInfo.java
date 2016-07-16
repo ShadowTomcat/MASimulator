@@ -52,6 +52,10 @@ public abstract class PartInfo {
 
     public abstract void seteDamageTakenNowTurn(Integer aDamageTakenNowTurn, Integer damageType);
 
+    public abstract Integer getDamageNumNowTurn(Integer damageType);
+
+    public abstract void setDamageNumNowTurn(Integer damageNum, Integer damageType);
+
     public abstract HashMap<String, List<BuffInfo>> getBuffs();
 
     public abstract void setBuffs(HashMap<String, List<BuffInfo>> buffs);

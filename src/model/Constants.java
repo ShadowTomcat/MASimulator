@@ -18,6 +18,19 @@ public class Constants {
     public static final HashMap<String, String> CATEGORY_MAP = new HashMap<>();
     public static final Long SLEEP_SHORT = 1000L;
     
+    public static final int SKILL_ROLE_FUNCTION_COL = 7;
+    public static final int SKILL_ROLE_TARGET = 8;
+    public static final int SKILL_ROLE_PARAM1 = 19;
+    public static final int SKILL_ROLE_PARAM2 = 20;
+    public static final int SKILL_ROLE_PARAM3 = 21;
+    public static final int SKILL_ROLE_PARAM4 = 22;
+    public static final int SKILL_ROLE_PARAM5 = 23;
+    public static final int SKILL_ROLE_PARAM6 = 24;
+    public static final int SKILL_ROLE_PARAM7 = 25;
+    public static final int SKILL_ROLE_PARAM8 = 26;
+    public static final int SKILL_ROLE_PARAM9 = 27;
+    public static final int SKILL_ROLE_PARAM10 = 28;
+    
     public static final Comparator HAND_CARD_CMP = new Comparator<HandCardInfo>() {
         @Override
         public int compare(HandCardInfo o1, HandCardInfo o2) {
