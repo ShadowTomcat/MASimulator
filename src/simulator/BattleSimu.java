@@ -44,6 +44,8 @@ import model.Enums.EnumCardLevel;
 import model.Enums.EnumPhysicsMagic;
 import model.PartInfo;
 import static model.Constants.*;
+import model.Enums.EnumSkillType;
+import model.SetCard;
 import model.TurnInfoRecord;
 import swing.CardPanelMouseAdapter;
 import swing.CardSelectionPopupMenu;
@@ -65,7 +67,7 @@ public class BattleSimu extends javax.swing.JPanel {
         initData();
     }
 
-    BattleSimu(String enemyPartyId, List<ArthurInfo> arthurList, List<EnemyInfo> enemyList,
+    public BattleSimu(String enemyPartyId, List<ArthurInfo> arthurList, List<EnemyInfo> enemyList,
             HashMap<String, List<String[]>> skillMap, HashMap<String, List<String[]>> skillRoleMap,
             HashMap<String, String[]> enemyAiOrderMap) {
         this.enemyPartyId = enemyPartyId;
@@ -117,7 +119,7 @@ public class BattleSimu extends javax.swing.JPanel {
     private List<EnemyInfo> enemyList;
     private List<ArthurInfo> arthurList;
     private String enemyPartyId;
-    private Integer turn;
+    private Integer turn, initialCost = 3;
     private boolean showCards;  // Show cards or sphere
 
     // During playing a skill.
@@ -234,6 +236,18 @@ public class BattleSimu extends javax.swing.JPanel {
                 arStatusTButton.get(0).setSelected(true);
                 dealCardQty = new Integer[]{0, 0, 0, 0};
                 nextTurn();
+                // Turn 0
+                if (hasTurnZeroSkill()) {
+                    haltGame(true);
+                    sleep(SLEEP_SHORT);
+                    processEnemySkill(true);
+                    refreshArthurUI();
+                    refreshEnemyUI();
+                    txtBattleInfo.append("————————————————先制结束————————————————\n\n");
+                    haltGame(false);
+                    turnInfoRecord.clear();
+                    recordTurnInfo();
+                }
             }
         }).start();
     }
@@ -270,7 +284,7 @@ public class BattleSimu extends javax.swing.JPanel {
                         refreshEnemyUI();
                     }
                     if (isWin == 0) {
-                        isWin = processEnemySkill();
+                        isWin = processEnemySkill(false);
                     }
                     if (isWin == 0) {
                         isWin = computeDotDamage(true);
@@ -278,16 +292,23 @@ public class BattleSimu extends javax.swing.JPanel {
                         refreshEnemyUI();
                     }
                     if (isWin == 0) {
+                        isWin = processArthurSetSkill();
+                        refreshArthurUI();
+                        refreshEnemyUI();
+                    }
+                    if (isWin == 0) {
                         processBuffs();
                         nextTurn();
                     } else if (isWin == -1) {
-                        txtBattleInfo.append("————————————————我方全灭……———————————————" + "\n");
+                        txtBattleInfo.append("————————————————我方全灭……———————————————" + "\n\n");
                         txtBattleInfo.setCaretPosition(txtBattleInfo.getText().length());
                         turnInfoRecord.add(new TurnInfoRecord()); // Last turn = dead turn.
+                        btnStartAgain.setEnabled(true);
                     } else if (isWin == 1) {
-                        txtBattleInfo.append("————————————————战斗胜利！————————————————" + "\n");
+                        txtBattleInfo.append("————————————————战斗胜利！————————————————" + "\n\n");
                         txtBattleInfo.setCaretPosition(txtBattleInfo.getText().length());
                         turnInfoRecord.add(new TurnInfoRecord());
+                        btnStartAgain.setEnabled(true);
                     }
                     ((MainFrame) UIUtil.getMainFrame()).enableTestFunc(true);
                 } catch (Exception e) {
@@ -319,6 +340,8 @@ public class BattleSimu extends javax.swing.JPanel {
             arthurList.get(i).setpDamageTakenNowTurn(0);
             arthurList.get(i).seteDamageTakenNowTurn(0, null);
             arthurList.get(i).setDamageTakenNowTurn(0);
+            arthurList.get(i).setDamageNumNowTurn(0, 3);
+            arthurList.get(i).setSkillTypeTakenNowTurn(null);
             arthurList.get(i).setHealTakenNowTurn(0);
         }
         for (int i = 0; i < enemyList.size(); i++) {
@@ -326,6 +349,7 @@ public class BattleSimu extends javax.swing.JPanel {
             enemyList.get(i).setpDamageTakenNowTurn(0);
             enemyList.get(i).seteDamageTakenNowTurn(0, null);
             enemyList.get(i).setDamageNumNowTurn(0, 3);
+            enemyList.get(i).setSkillTypeTakenNowTurn(null);
             enemyList.get(i).setDamageTakenNowTurn(0);
             enemyList.get(i).setHealTakenNowTurn(0);
         }
@@ -510,7 +534,7 @@ public class BattleSimu extends javax.swing.JPanel {
         log.debug(part.getName() + " deal qty = " + dealCardQty[EnumArthur.getIndexByName(part.getName())]);
     }
 
-    private Integer processEnemySkill() {
+    private Integer processEnemySkill(Boolean isTurnZero) {
         log.info("Start processEnemySkill.");
         txtBattleInfo.append("————————————————敌方行动————————————————\n\n");
         txtBattleInfo.setCaretPosition(txtBattleInfo.getText().length());
@@ -525,7 +549,7 @@ public class BattleSimu extends javax.swing.JPanel {
             if (enemy.isDead()) {
                 continue;
             }
-            if (enemy.getBuffs().containsKey("STAN") && enemy.getBuffs().get("STAN").isEmpty()) {
+            if (enemy.getBuffs().containsKey("STAN") && !enemy.getBuffs().get("STAN").isEmpty()) {
                 sb.append(enemy.getName()).append("无法行动。\n");
                 continue;
             }
@@ -539,7 +563,7 @@ public class BattleSimu extends javax.swing.JPanel {
                 action = enemy.getSkills().get(i);
                 enemyAiOrder = enemyAiOrderMap.get(action.getAiOrderId());
                 // Check cost and ai order conditions.
-                if (enemy.getCurrentActionPoint() < action.getCost() || !aiOrderSatisfied(enemyAiOrder, enemy)
+                if (enemy.getCurrentActionPoint() < action.getCost() || !aiOrderSatisfied(enemyAiOrder, enemy, isTurnZero)
                         || action.getMaxTimes() <= 0) {
                     continue;
                 }
@@ -616,7 +640,7 @@ public class BattleSimu extends javax.swing.JPanel {
         Integer[] target = determineEnemyTarget(action, skills.get(0)[18]);
         if (skills.size() > 1) {  // re-check boost skill , otherwise should be 0.
             for (int i = 1; i < skills.size(); i++) {
-                boostPriority = Math.max(boostPriority, checkIsBoost(skills.get(i), action.getEnemyIndex(), false, target));
+                boostPriority = Math.max(boostPriority, checkIsBoost(skills.get(i), action.getEnemyIndex(), false, target, false));
                 log.debug("Skill: " + action.getSkillId() + " Priority: " + boostPriority);
             }
         }
@@ -813,9 +837,9 @@ public class BattleSimu extends javax.swing.JPanel {
     /**
      * @return - True if AI condition satisfied, false otherwise.
      */
-    private boolean aiOrderSatisfied(String[] enemyAiOrder, EnemyInfo enemy) {
+    private boolean aiOrderSatisfied(String[] enemyAiOrder, EnemyInfo enemy, Boolean isTurnZero) {
         //log.warn(enemyAiOrder[0]);
-        String partCondition = enemyAiOrder[1];
+        String partCondition = enemyAiOrder[ENEMY_AI_CONDITION];
         if (partCondition.contains("PARTS") && enemy.getParts() == null) {
             log.error("ERROR.");
             return false;
@@ -856,18 +880,18 @@ public class BattleSimu extends javax.swing.JPanel {
                 break;
         }
 
-        if (enemyAiOrder[2].matches("[\\d]+") && enemyAiOrder[3].matches("[\\d]+")) {
-            Integer hpLowerLimit = Integer.parseInt(enemyAiOrder[2]);
-            Integer hpHigherLimit = Integer.parseInt(enemyAiOrder[3]);
+        if (enemyAiOrder[ENEMY_AI_LOW_HP].matches("[\\d]+") && enemyAiOrder[ENEMY_AI_HIGH_HP].matches("[\\d]+")) {
+            Integer hpLowerLimit = Integer.parseInt(enemyAiOrder[ENEMY_AI_LOW_HP]);
+            Integer hpHigherLimit = Integer.parseInt(enemyAiOrder[ENEMY_AI_HIGH_HP]);
             Integer hp_per = enemy.getCurrentAttr(EnumAttribute.getIndexById("HP")) * 100 / enemy.getCurrentAttr(EnumAttribute.getIndexById("MAX_HP"));
             if (hp_per < hpLowerLimit || hp_per > hpHigherLimit) {
                 return false;
             }
         }
 
-        if (enemyAiOrder[4].matches("[\\d]+") && enemyAiOrder[5].matches("[\\d]+")) {
-            Integer parentHpLowerLimit = Integer.parseInt(enemyAiOrder[4]);
-            Integer parentHpHigherLimit = Integer.parseInt(enemyAiOrder[5]);
+        if (enemyAiOrder[ENEMY_AI_MAIN_LOW_HP].matches("[\\d]+") && enemyAiOrder[ENEMY_AI_MAIN_HIGH_HP].matches("[\\d]+")) {
+            Integer parentHpLowerLimit = Integer.parseInt(enemyAiOrder[ENEMY_AI_MAIN_LOW_HP]);
+            Integer parentHpHigherLimit = Integer.parseInt(enemyAiOrder[ENEMY_AI_MAIN_HIGH_HP]);
             EnemyInfo parent = enemyList.get(enemy.getParent());
             Integer hp_per = parent.getCurrentAttr(EnumAttribute.getIndexById("HP")) * 100 / parent.getCurrentAttr(EnumAttribute.getIndexById("MAX_HP"));
             if (hp_per < parentHpLowerLimit || hp_per > parentHpHigherLimit) {
@@ -876,38 +900,51 @@ public class BattleSimu extends javax.swing.JPanel {
         }
 
         Integer turnIndex;
-        if (turn <= 10) {
-            turnIndex = turn + 5;
+        if (isTurnZero) {
+            turnIndex = ENEMY_AI_TURN_SHIFT;
+        } else if (turn <= 10) {
+            turnIndex = turn + ENEMY_AI_TURN_SHIFT;
         } else {
-            turnIndex = (turn - 1) % 10 + 17;
+            turnIndex = (turn - 1) % 10 + 18;
         }
         if (!enemyAiOrder[turnIndex].equals("1")) {
             return false;
         }
 
-        String triggerType = enemyAiOrder[27];
+        String triggerType = enemyAiOrder[ENEMY_AI_TRIGGER_TYPE];
         switch (triggerType) {
             case "AI_FLAG":
-                if (!enemyTriggerAiFlag.containsKey(enemyAiOrder[28])
-                        || !enemyTriggerAiFlag.get(enemyAiOrder[28]).equals(1)) {
+                if (!enemyTriggerAiFlag.containsKey(enemyAiOrder[ENEMY_AI_TRIGGER_PARAM1])
+                        || !enemyTriggerAiFlag.get(enemyAiOrder[ENEMY_AI_TRIGGER_PARAM1]).equals(1)) {
                     return false;
                 }
                 break;
             case "BAD_STATUS":
-                log.error("Error.");
+                Boolean hasBadStatus = false;
+                for (int i = 0; i < 3; i++) {
+                    if (enemyAiOrder.length > (ENEMY_AI_TRIGGER_PARAM1 + i)) {
+                        String buffName = enemyAiOrder[ENEMY_AI_TRIGGER_PARAM1 + i];
+                        if (enemy.getBuffs().containsKey(buffName) && !enemy.getBuffs().get(buffName).isEmpty()) {
+                            hasBadStatus = true;
+                        }
+                    }
+                }
+                if (!hasBadStatus) {
+                    return false;
+                }
                 break;
             case "DAMAGE":
-                if ((enemy.getpDamageTakenNowTurn() + enemy.getmDamageTakenNowTurn() + enemy.geteDamageTakenNowTurn(null)) < Integer.parseInt(enemyAiOrder[28])) {
+                if ((enemy.getpDamageTakenNowTurn() + enemy.getmDamageTakenNowTurn() + enemy.geteDamageTakenNowTurn(null)) < Integer.parseInt(enemyAiOrder[ENEMY_AI_TRIGGER_PARAM1])) {
                     return false;
                 }
                 break;
             case "DEAD_COUNT":
-                Integer enemyIndex = Integer.parseInt(enemyAiOrder[28].substring(5, 6)) - 1;
-                Integer minDeadCount = Integer.parseInt(enemyAiOrder[29]);
+                Integer enemyIndex = Integer.parseInt(enemyAiOrder[ENEMY_AI_TRIGGER_PARAM1].substring(5, 6)) - 1;
+                Integer minDeadCount = Integer.parseInt(enemyAiOrder[ENEMY_AI_TRIGGER_PARAM2]);
                 Integer maxDeadCount = 999;
-                if (enemyAiOrder.length > 30 && enemyAiOrder[30].matches("[\\d]+")
-                        && Integer.parseInt(enemyAiOrder[30]) != 0 && Integer.parseInt(enemyAiOrder[29]) == 0) {     // MAY have bug
-                    maxDeadCount = Integer.parseInt(enemyAiOrder[30]);
+                if (enemyAiOrder.length > ENEMY_AI_TRIGGER_PARAM3 && enemyAiOrder[ENEMY_AI_TRIGGER_PARAM3].matches("[\\d]+")
+                        && Integer.parseInt(enemyAiOrder[ENEMY_AI_TRIGGER_PARAM3]) != 0 && Integer.parseInt(enemyAiOrder[ENEMY_AI_TRIGGER_PARAM2]) == 0) {     // MAY have bug
+                    maxDeadCount = Integer.parseInt(enemyAiOrder[ENEMY_AI_TRIGGER_PARAM3]);
                 }
                 if (enemyList.get(enemyIndex).getDeadCount() < minDeadCount || enemyList.get(enemyIndex).getDeadCount() >= maxDeadCount) {
                     return false;
@@ -915,8 +952,8 @@ public class BattleSimu extends javax.swing.JPanel {
                 break;
             case "ENEMY_DEAD":
                 for (int i = 0; i < 3; i++) {
-                    if (enemyAiOrder.length > 28 + i && enemyAiOrder[28 + i].contains("ENEMY")) {
-                        if (!enemyList.get(Integer.parseInt(enemyAiOrder[28 + i].substring(5, 6)) - 1).isDead()) {
+                    if (enemyAiOrder.length > ENEMY_AI_TRIGGER_PARAM1 + i && enemyAiOrder[ENEMY_AI_TRIGGER_PARAM1 + i].contains("ENEMY")) {
+                        if (!enemyList.get(Integer.parseInt(enemyAiOrder[ENEMY_AI_TRIGGER_PARAM1 + i].substring(5, 6)) - 1).isDead()) {
                             return false;
                         }
                     }
@@ -927,22 +964,22 @@ public class BattleSimu extends javax.swing.JPanel {
                 for (ArthurInfo arthur : arthurList) {
                     totalHeal += arthur.getHealTakenNowTurn();
                 }
-                if (totalHeal < Integer.parseInt(enemyAiOrder[28])) {
+                if (totalHeal < Integer.parseInt(enemyAiOrder[ENEMY_AI_TRIGGER_PARAM1])) {
                     return false;
                 }
                 break;
             case "MAGIC_DAMAGE":
-                if (enemy.getmDamageTakenNowTurn() + enemy.geteDamageTakenNowTurn(null) < Integer.parseInt(enemyAiOrder[28])) {
+                if (enemy.getmDamageTakenNowTurn() + enemy.geteDamageTakenNowTurn(null) < Integer.parseInt(enemyAiOrder[ENEMY_AI_TRIGGER_PARAM1])) {
                     return false;
                 }
                 break;
             case "ENCHANT_DAMAGE":
-                if (enemy.geteDamageTakenNowTurn(EnumType.getIndexById(enemyAiOrder[28])) < Integer.parseInt(enemyAiOrder[29])) {
+                if (enemy.geteDamageTakenNowTurn(EnumType.getIndexById(enemyAiOrder[ENEMY_AI_TRIGGER_PARAM1])) < Integer.parseInt(enemyAiOrder[ENEMY_AI_TRIGGER_PARAM2])) {
                     return false;
                 }
                 break;
             case "MAGIC_DAMAGE_LARGE":
-                if ((enemy.getmDamageTakenNowTurn() - enemy.getpDamageTakenNowTurn()) < Integer.parseInt(enemyAiOrder[28])) {
+                if ((enemy.getmDamageTakenNowTurn() - enemy.getpDamageTakenNowTurn()) < Integer.parseInt(enemyAiOrder[ENEMY_AI_TRIGGER_PARAM1])) {
                     return false;
                 }
                 break;
@@ -952,20 +989,20 @@ public class BattleSimu extends javax.swing.JPanel {
                 }
                 break;
             case "PHYSIC_DAMAGE":
-                if (enemy.getpDamageTakenNowTurn() + enemy.geteDamageTakenNowTurn(null) < Integer.parseInt(enemyAiOrder[28])) {
+                if (enemy.getpDamageTakenNowTurn() + enemy.geteDamageTakenNowTurn(null) < Integer.parseInt(enemyAiOrder[ENEMY_AI_TRIGGER_PARAM1])) {
                     return false;
                 }
                 break;
             case "PHYSIC_DAMAGE_LARGE":
-                if ((enemy.getpDamageTakenNowTurn() - enemy.getmDamageTakenNowTurn()) < Integer.parseInt(enemyAiOrder[28])) {
+                if ((enemy.getpDamageTakenNowTurn() - enemy.getmDamageTakenNowTurn()) < Integer.parseInt(enemyAiOrder[ENEMY_AI_TRIGGER_PARAM1])) {
                     return false;
                 }
                 break;
             case "SKILL_ROLE_KIND_DEBUFF":
                 Boolean hasBuff = false;
                 for (int i = 0; i < 3; i++) {
-                    if (enemyAiOrder.length > (28 + i)) {
-                        String buffName = enemyAiOrder[28 + i];
+                    if (enemyAiOrder.length > (ENEMY_AI_TRIGGER_PARAM1 + i)) {
+                        String buffName = enemyAiOrder[ENEMY_AI_TRIGGER_PARAM1 + i];
                         if (enemy.getBuffs().containsKey(buffName) && !enemy.getBuffs().get(buffName).isEmpty()) {
                             hasBuff = true;
                         }
@@ -978,8 +1015,8 @@ public class BattleSimu extends javax.swing.JPanel {
             case "SKILL_ROLE_KIND_DEBUFF_BY_USER":
                 hasBuff = false;
                 for (int i = 0; i < 3; i++) {
-                    if (enemyAiOrder.length > (28 + i)) {
-                        String buffName = enemyAiOrder[28 + i];
+                    if (enemyAiOrder.length > (ENEMY_AI_TRIGGER_PARAM1 + i)) {
+                        String buffName = enemyAiOrder[ENEMY_AI_TRIGGER_PARAM1 + i];
                         for (ArthurInfo arthur : arthurList) {
                             if (arthur.getBuffs().containsKey(buffName) && !arthur.getBuffs().get(buffName).isEmpty()) {
                                 hasBuff = true;
@@ -994,8 +1031,8 @@ public class BattleSimu extends javax.swing.JPanel {
             case "SKILL_ROLE_KIND_DEBUFF_NOW_TURN":
                 hasBuff = false;
                 for (int i = 0; i < 3; i++) {
-                    if (enemyAiOrder.length > (28 + i)) {
-                        String buffName = enemyAiOrder[28 + i];
+                    if (enemyAiOrder.length > (ENEMY_AI_TRIGGER_PARAM1 + i)) {
+                        String buffName = enemyAiOrder[ENEMY_AI_TRIGGER_PARAM1 + i];
                         if (enemy.getBuffs().containsKey(buffName)) {
                             for (BuffInfo buff : enemy.getBuffs().get(buffName)) {
                                 if (buff.getTurnSet().equals(turn)) {
@@ -1012,8 +1049,8 @@ public class BattleSimu extends javax.swing.JPanel {
             case "SKILL_ROLE_KIND_BUFF_NOW_TURN_BY_USER":
                 hasBuff = false;
                 for (int i = 0; i < 3; i++) {
-                    if (enemyAiOrder.length > (28 + i)) {
-                        String buffName = enemyAiOrder[28 + i];
+                    if (enemyAiOrder.length > (ENEMY_AI_TRIGGER_PARAM1 + i)) {
+                        String buffName = enemyAiOrder[ENEMY_AI_TRIGGER_PARAM1 + i];
                         for (ArthurInfo arthur : arthurList) {
                             if (arthur.getBuffs().containsKey(buffName)) {
                                 for (BuffInfo buff : arthur.getBuffs().get(buffName)) {
@@ -1032,8 +1069,8 @@ public class BattleSimu extends javax.swing.JPanel {
             case "SKILL_ROLE_KIND_BUFF_BY_USER":
                 hasBuff = false;
                 for (int i = 0; i < 3; i++) {
-                    if (enemyAiOrder.length > (28 + i)) {
-                        String buffName = enemyAiOrder[28 + i];
+                    if (enemyAiOrder.length > (ENEMY_AI_TRIGGER_PARAM1 + i)) {
+                        String buffName = enemyAiOrder[ENEMY_AI_TRIGGER_PARAM1 + i];
                         for (ArthurInfo arthur : arthurList) {
                             if (arthur.getBuffs().containsKey(buffName) && !arthur.getBuffs().get(buffName).isEmpty()) {
                                 hasBuff = true;
@@ -1046,20 +1083,27 @@ public class BattleSimu extends javax.swing.JPanel {
                 }
                 break;
             case "DECK_COMBO_COUNT":
-                Integer lowerLimit = Integer.parseInt(enemyAiOrder[28]);
-                Integer upperLimit = Integer.parseInt(enemyAiOrder[29]);
+                Integer lowerLimit = Integer.parseInt(enemyAiOrder[ENEMY_AI_TRIGGER_PARAM1]);
+                Integer upperLimit = Integer.parseInt(enemyAiOrder[ENEMY_AI_TRIGGER_PARAM2]);
                 if ((deckComboCount + 1) < lowerLimit || (deckComboCount + 1) > upperLimit) {
                     return false;
                 }
                 break;
             case "DAMAGE_NUM":
-                Integer damageType = EnumPhysicsMagic.getIndexById(enemyAiOrder[28]);
-                lowerLimit = Integer.parseInt(enemyAiOrder[29]);
-                upperLimit = Integer.parseInt(enemyAiOrder[30]);
+                Integer damageType = EnumPhysicsMagic.getIndexById(enemyAiOrder[ENEMY_AI_TRIGGER_PARAM1]);
+                lowerLimit = Integer.parseInt(enemyAiOrder[ENEMY_AI_TRIGGER_PARAM2]);
+                upperLimit = Integer.parseInt(enemyAiOrder[ENEMY_AI_TRIGGER_PARAM3]);
                 Integer damageNum = enemy.getDamageNumNowTurn(damageType);
                 if (damageNum < lowerLimit || damageNum > upperLimit) {
                     return false;
                 }
+                break;
+            case "SKILL_KIND":
+                Integer skillKindIndex = EnumSkillType.getIndexById(enemyAiOrder[ENEMY_AI_TRIGGER_PARAM1]);
+                if (enemy.getSkillTypeTakenNowTurn(skillKindIndex) == 0) {
+                    return false;
+                }
+                break;
             case "NULL":
                 break;
             default:
@@ -1069,6 +1113,77 @@ public class BattleSimu extends javax.swing.JPanel {
         }
 
         return true;
+    }
+
+    // return 0 if continue, 1 if break.
+    private Integer processArthurSetSkill() {
+        log.info("Start processArthurSetSkill.");
+        List<HandCardInfo> actionList = new ArrayList<>();
+        List<HandCardInfo> expireList = new ArrayList<>();
+        HandCardInfo setAction;
+        for (ArthurInfo arthur : arthurList) {
+            for (SetCard setCard : arthur.getSetCards()) {
+                setCard.setDelayedTurnLeft(setCard.getDelayedTurnLeft() - 1);
+                setAction = setCard.getCardInfo();
+                List<String[]> skills = skillMap.get(setAction.getSkillId());
+                if(!skills.get(0)[SKILL_TRIGGER_TIME].trim().equals("ENEMY_ACTION_END")){
+                    continue;
+                }
+                // Is triggered. NOTICE: chain is re-computed during card play phase.
+                if (checkIsBoost(skills.get(0), setAction.getSkill().getArthurIndex(), true, setAction.getTarget(), true) > 0) {
+                    setAction.setDelayedTurn(0);
+                    setAction.setCardSkillPriority(Integer.parseInt(skillMap.get(setCard.getSkillId()).get(0)[SKILL_PVE_PRIORITY]));
+                    actionList.add(setAction);
+                } else if (setCard.getDelayedTurnLeft().equals(0)) {
+                    expireList.add(setAction);
+                }
+            }
+        }
+
+        if (actionList.isEmpty() && expireList.isEmpty()) {
+            return 0;
+        }
+
+        // Shuffle the 'cards'.
+        long n = actionList.size();
+        HandCardInfo temp;
+        for (int i = 0; i < n; i++) {
+            Integer index = ((Long) Math.round(Math.random() * (n - i) - 0.5 + i)).intValue();
+            if (index != i) {
+                temp = actionList.get(i);
+                actionList.set(i, actionList.get(index));
+                actionList.set(index, temp);
+            }
+        }
+        // Re-order them.
+        actionList.sort(Constants.HAND_CARD_CMP);
+        sortCardOrderWithSamePriority(actionList);
+
+        txtBattleInfo.append("————————————————回应技能————————————————\n\n");
+        txtBattleInfo.setCaretPosition(txtBattleInfo.getText().length());
+        sleep(SLEEP_SHORT);
+        if (executeSkills(actionList)) {
+            return 1;
+        }
+
+        // Remove triggered or expired set cards.
+        StringBuilder sb = new StringBuilder();
+        for (HandCardInfo action : actionList) {
+            ArthurInfo arthur = arthurList.get(action.getSkill().getArthurIndex());
+            arthur.triggerSetCard(action.getSkillId());
+        }
+        for (HandCardInfo action : expireList) {
+            ArthurInfo arthur = arthurList.get(action.getSkill().getArthurIndex());
+            sb.append(arthur.getName()).append("的设置卡牌：【").append(action.getSkill().getCardName()).append("】超过时限，被送回牌堆。\n");
+            arthur.triggerSetCard(action.getSkillId());
+        }
+        if (sb.length() > 0) {
+            sb.append("\n");
+            txtBattleInfo.append(sb.toString());
+            txtBattleInfo.setCaretPosition(txtBattleInfo.getText().length());
+            sleep(SLEEP_SHORT);
+        }
+        return 0;
     }
 
     /**
@@ -1085,7 +1200,7 @@ public class BattleSimu extends javax.swing.JPanel {
 //                if (skillMap.get(card.getSkillId()).get(card.getBoostPriority())[14].matches("[\\d+]")) {
 //                    card.setCardSkillPriority(Integer.parseInt(skillMap.get(card.getSkillId()).get(card.getBoostPriority())[14]));
 //                } else {
-                card.setCardSkillPriority(Integer.parseInt(skillMap.get(card.getSkillId()).get(0)[14]));
+                card.setCardSkillPriority(Integer.parseInt(skillMap.get(card.getSkillId()).get(0)[SKILL_PVE_PRIORITY]));
 //                }
                 actionList.add(card);
             }
@@ -1115,50 +1230,12 @@ public class BattleSimu extends javax.swing.JPanel {
         txtBattleInfo.append("————————————————我方行动————————————————\n\n");
         txtBattleInfo.setCaretPosition(txtBattleInfo.getText().length());
         sleep(SLEEP_SHORT);
-        StringBuilder sb;
-        Integer cardLevel;
-        for (HandCardInfo action : actionList) {
-            sb = new StringBuilder();
-            sb.append(EnumArthur.getNameByIndex(action.getSkill().getArthurIndex())).append(" 使用");
-            if (action.getSkill().isSphere()) {
-                sb.append("SPHERE：【");
-            } else {
-                sb.append("卡牌：【");
-            }
-            sb.append(action.getSkill().getCardName()).append("】（").append(action.getCurrentChain() + 1).append("Chain）\n");
-            if (action.getSkill().getDialogue() != null && !action.getSkill().getDialogue().isEmpty()) {
-                sb.append("『").append(action.getSkill().getDialogue()).append("』\n");
-            }
-            txtBattleInfo.append(sb.toString());
-
-            // Re-determine isBoost. (Chain is fixed, but isBoost may change)
-            List<String[]> skills = skillMap.get(action.getSkillId());
-            if (skills.size() != 1) {  // re-check boost skill , otherwise should be 0.
-                action.setBoostPriority(checkIsBoost(skills.get(skills.size() - 1), action.getSkill().getArthurIndex(), true, action.getTarget()));
-            }
-            cardLevel = EnumCardLevel.getLevel(action.getSkill().getRarity());
-
-            log.info("Execute Skill:" + skills.get(0)[0] + " | actual skill: " + skills.get(action.getBoostPriority())[0] + " | boost: " + action.getBoostPriority()
-                    + " | cardLevel: " + cardLevel + " | chain: " + action.getCurrentChain() + " | arthur index: " + action.getSkill().getArthurIndex()
-                    + " | target: " + Arrays.toString(action.getTarget()));
-            executeSkill(skills.get(0), skills.get(action.getBoostPriority()), cardLevel, action.getCurrentChain(),
-                    action.getSkill().getArthurIndex(), action.getTarget(), true);
-
-            txtBattleInfo.append("\n");
-            refreshArthurUI();
-            refreshEnemyUI();
-            txtBattleInfo.setCaretPosition(txtBattleInfo.getText().length());
-            sleep(SLEEP_SHORT);
-
-            // Check winning condition.
-            if (isWin() == 1) {
-                return 1;
-            }
-
+        if (executeSkills(actionList)) {
+            return 1;
         }
 
         // Remove all played handcards.
-        sb = new StringBuilder();
+        StringBuilder sb = new StringBuilder();
         for (HandCardInfo action : actionList) {
             ArthurInfo arthur = arthurList.get(action.getSkill().getArthurIndex());
             if (action.getIsTrapped() > 0) {
@@ -1180,7 +1257,11 @@ public class BattleSimu extends javax.swing.JPanel {
                 sb.append(arthur.getName()).append("受到").append(damage).append("点卡牌陷阱伤害。\n");
             }
             if (!action.getSkill().isSphere()) {
-                arthur.playCard(action.getHandPosition());
+                if (action.getDelayedTurn() > 0) {
+                    arthur.setCard(action.getHandPosition());
+                } else {
+                    arthur.playCard(action.getHandPosition());
+                }
             } else {
                 arthur.playSphere(action.getHandPosition());
             }
@@ -1197,6 +1278,64 @@ public class BattleSimu extends javax.swing.JPanel {
             arthurList.get(i).getCurrentPlayedItem().clear();
         }
         return 0;
+    }
+
+    /**
+     *
+     * @param actionList
+     * @return - True if wins, false otherwise.
+     */
+    public boolean executeSkills(List<HandCardInfo> actionList) {
+        StringBuilder sb;
+        Integer cardLevel;
+        for (HandCardInfo action : actionList) {
+            sb = new StringBuilder();
+            if (action.getDelayedTurn() > 0) {
+                sb.append(EnumArthur.getNameByIndex(action.getSkill().getArthurIndex())).append(" 设置");
+            } else {
+                sb.append(EnumArthur.getNameByIndex(action.getSkill().getArthurIndex())).append(" 使用");
+            }
+            if (action.getSkill().isSphere()) {
+                sb.append("SPHERE：【");
+            } else {
+                sb.append("卡牌：【");
+            }
+            sb.append(action.getSkill().getCardName()).append("】");
+            if (action.getDelayedTurn() > 0) {     // Setcard(s) does not have effect during set.
+                sb.append("（").append(action.getDelayedTurn()).append("回合）\n\n");
+                txtBattleInfo.append(sb.toString());
+                txtBattleInfo.setCaretPosition(txtBattleInfo.getText().length());
+                sleep(SLEEP_SHORT);
+                continue;
+            } else {
+                sb.append("（").append(action.getCurrentChain() + 1).append("Chain）\n");
+            }
+            if (action.getSkill().getDialogue() != null && !action.getSkill().getDialogue().isEmpty()) {
+                sb.append("『").append(action.getSkill().getDialogue()).append("』\n");
+            }
+            txtBattleInfo.append(sb.toString());
+            // Re-determine isBoost. (Chain is fixed, but isBoost may change)
+            List<String[]> skills = skillMap.get(action.getSkillId());
+            if (skills.size() != 1) {  // re-check boost skill , otherwise should be 0.
+                action.setBoostPriority(checkIsBoost(skills.get(skills.size() - 1), action.getSkill().getArthurIndex(), true, action.getTarget(), false));
+            }
+            cardLevel = EnumCardLevel.getLevel(action.getSkill().getRarity());
+            log.info("Execute Skill:" + skills.get(0)[0] + " | actual skill: " + skills.get(action.getBoostPriority())[0] + " | boost: " + action.getBoostPriority()
+                    + " | cardLevel: " + cardLevel + " | chain: " + action.getCurrentChain() + " | arthur index: " + action.getSkill().getArthurIndex()
+                    + " | target: " + Arrays.toString(action.getTarget()));
+            executeSkill(skills.get(0), skills.get(action.getBoostPriority()), cardLevel, action.getCurrentChain(),
+                    action.getSkill().getArthurIndex(), action.getTarget(), true);
+            txtBattleInfo.append("\n");
+            refreshArthurUI();
+            refreshEnemyUI();
+            txtBattleInfo.setCaretPosition(txtBattleInfo.getText().length());
+            sleep(SLEEP_SHORT);
+            // Check winning condition.
+            if (isWin() == 1) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private void executeSkill(String[] skillBase, String[] skill, Integer cardLevel, Integer chain, Integer partIndex, Integer[] target, boolean isArthur) {
@@ -1232,9 +1371,10 @@ public class BattleSimu extends javax.swing.JPanel {
         }
 
         Long chainBoostVal = 0L;
-        if (!skill[19].isEmpty()) {
-            chainBoostVal = Long.parseLong(skill[19]);
+        if (!skill[SKILL_CHAIN_BOOST].isEmpty()) {
+            chainBoostVal = Long.parseLong(skill[SKILL_CHAIN_BOOST]);
         }
+        String skillType = skill[SKILL_CATEGORY];
 
         //Integer[] attr = part.getCurrentAttr();
         Long val;
@@ -1243,7 +1383,7 @@ public class BattleSimu extends javax.swing.JPanel {
         Integer drainRate = 0;
         Integer defencePiercing = 0;
         StringBuilder sb;
-        List<String[]> skillRoleList = skillRoleMap.get(skill[27]);
+        List<String[]> skillRoleList = skillRoleMap.get(skill[SKILL_SKILLROLE_COL]);
         for (String[] skillRole : skillRoleList) {
             if (skillRole[SKILL_ROLE_TARGET].equals("SELECT")) {
                 realTargetParts = targetParts;
@@ -1304,6 +1444,13 @@ public class BattleSimu extends javax.swing.JPanel {
                 }
             }
 
+            // Record skill taken
+            if (skillType != null && !skillType.isEmpty()) {
+                for (PartInfo targetPart : realTargetParts) {
+                    targetPart.setSkillTypeTakenNowTurn(EnumSkillType.getIndexById(skillType));
+                }
+            }
+
             switch (skillRole[SKILL_ROLE_FUNCTION_COL]) {
                 case "NONE":
                 // DO NOTHING.
@@ -1358,13 +1505,17 @@ public class BattleSimu extends javax.swing.JPanel {
                     String physics = skillRole[SKILL_ROLE_PARAM9];
                     Integer attackTimes = Integer.parseInt(skillRole[SKILL_ROLE_PARAM5]);
                     Long defence;
+                    Long typeDefence;
                     Integer typeRate;
                     Integer critDamageRate;
                     Integer damamgeReductionRate;
-                    Long totalDamage = 0L;
+                    Long totalDamage = 0L,
+                     reflectDamage = 0L;
                     Integer weaknessRate;
+                    BuffInfo reflection = null;
                     for (PartInfo targetPart : realTargetParts) {
                         typeRate = 0;
+                        typeDefence = 0L;
                         defence = targetPart.getCurrentAttr(EnumAttribute.getIndexById(EnumPhysicsMagic.getDefIdById(physics))).longValue();
                         if (defencePiercing > 0) {
                             defence = Math.min(defence, defence * (100 - defencePiercing) / 100);
@@ -1377,6 +1528,7 @@ public class BattleSimu extends javax.swing.JPanel {
                             if (tempRate > typeRate) {
                                 typeRate = tempRate;
                             }
+                            typeDefence += targetPart.getTypeDef()[EnumType.getIndexById(atkTypeStr)];
                         }
                         if (rateDownInvalid && typeRate < 100) {
                             typeRate = 100;
@@ -1387,6 +1539,11 @@ public class BattleSimu extends javax.swing.JPanel {
                             weaknessRate += targetPart.getBuffs().get("WEAKNESS").get(0).getValue()[0];
                         }
                         damamgeReductionRate = 100 - targetPart.getCurrentAttr(EnumAttribute.getIndexById("DDUC"));
+                        if (targetPart.getBuffs().containsKey("REFLECTION") && !targetPart.getBuffs().get("REFLECTION").isEmpty()) {
+                            reflection = targetPart.getBuffs().get("REFLECTION").get(0);
+                        } else {
+                            reflection = null;
+                        }
 
                         for (int i = 0; i < attackTimes; i++) {
                             critDamageRate = 100;
@@ -1397,7 +1554,7 @@ public class BattleSimu extends javax.swing.JPanel {
                             log.info("AtkOpVal：" + atkOpVal + " | drainRate：" + drainRate + " | defencePiercing：" + defencePiercing + " | rateDownInvalid：" + rateDownInvalid);
                             log.info("Orig val: " + val + " | critDamageRate: " + critDamageRate + " | critRate: " + critRate
                                     + " | typeRate: " + typeRate + " | weaknessRate: " + weaknessRate
-                                    + " | defence: " + defence + " | damamgeReductionRate: " + damamgeReductionRate
+                                    + "\n | defence: " + defence + " | typeDefence: " + typeDefence + " | damamgeReductionRate: " + damamgeReductionRate
                                     + " | chainBoostVal: " + chainBoostVal + " | chain: " + chain);
                             Long damage = val * critDamageRate / 100 * typeRate / 100 * weaknessRate / 100;
                             damage = damage * (100 + chainBoostVal * chain) / 100 - defence;
@@ -1415,12 +1572,15 @@ public class BattleSimu extends javax.swing.JPanel {
                                     }
                                 }
                             }
-
+                            Long newDamage = damage - typeDefence;  // 到底吃不吃减伤呢？
+                            if (newDamage <= 0L) {
+                                newDamage = damage;
+                            }
+                            damage = newDamage;
                             totalDamage += damage;
                             targetPart.setDamageTaken(targetPart.getDamageTaken() + damage.intValue());
                             targetPart.setDamageTakenNowTurn(targetPart.getDamageTakenNowTurn() + damage.intValue());
-                            Integer damageTypeIndex = EnumPhysicsMagic.getIndexById(physics);
-                            targetPart.setDamageNumNowTurn(targetPart.getDamageNumNowTurn(damageTypeIndex) + 1, damageTypeIndex);
+                            targetPart.addDamageNumNowTurn(1, EnumPhysicsMagic.getIndexById(physics));
                             if (physics.equals("PHYSICS")) {
                                 targetPart.setpDamageTakenNowTurn(targetPart.getpDamageTakenNowTurn() + damage.intValue());
                             } else {
@@ -1447,6 +1607,18 @@ public class BattleSimu extends javax.swing.JPanel {
                                 } else {
                                     sb.deleteCharAt(sb.length() - 1);
                                     sb.append("，被标记）");
+                                }
+                            }
+                            if (typeDefence != 0) {
+                                if (sb.indexOf("）") != -1) {
+                                    sb.deleteCharAt(sb.length() - 1).append("，");
+                                } else {
+                                    sb.append("（");
+                                }
+                                if (typeDefence > 0) {
+                                    sb.append("抗性抵消").append(typeDefence).append("伤害）");
+                                } else {
+                                    sb.append("抗性追加").append(-typeDefence).append("伤害）");
                                 }
                             }
                             if (damage.equals(0)) {
@@ -1478,6 +1650,10 @@ public class BattleSimu extends javax.swing.JPanel {
                                     sb = new StringBuilder();
                                     sb.append(targetPart.getName()).append("被击破！\n");
                                     txtBattleInfo.append(sb.toString());
+                                } else if (reflection != null) {
+                                    if (reflection.getValue()[1].equals(EnumPhysicsMagic.PM3.getIndex()) || reflection.getValue()[2].equals(EnumPhysicsMagic.getIndexById(physics))) {
+                                        reflectDamage += damage * reflection.getValue()[0] / 10000;
+                                    }
                                 }
                             }
 
@@ -1502,13 +1678,17 @@ public class BattleSimu extends javax.swing.JPanel {
                                         }
                                     }
                                 }
+                                newDamage = enchDamage - typeDefence;  // 到底吃不吃减伤呢？
+                                if (newDamage <= 0L) {
+                                    newDamage = enchDamage;
+                                }
+                                enchDamage = newDamage;
                                 totalDamage += enchDamage;
                                 targetPart.setDamageTaken(targetPart.getDamageTaken() + enchDamage.intValue());
                                 targetPart.setDamageTakenNowTurn(targetPart.getDamageTakenNowTurn() + enchDamage.intValue());
                                 targetPart.seteDamageTakenNowTurn(targetPart.geteDamageTakenNowTurn(enchant.getValue()[1]) + enchDamage.intValue(), enchant.getValue()[1]);
-                                damageTypeIndex = EnumPhysicsMagic.getIndexById("ENCHANT");
-                                targetPart.setDamageNumNowTurn(targetPart.getDamageNumNowTurn(damageTypeIndex) + 1, damageTypeIndex);
-                                
+                                targetPart.addDamageNumNowTurn(1, EnumPhysicsMagic.getIndexById("ENCHANT"));
+
                                 sb = new StringBuilder();
                                 sb.append("对").append(targetPart.getName()).append("造成").append(enchDamage).append("点").
                                         append(EnumType.getNameByIndex(enchant.getValue()[1])).append("属性追加伤害。");
@@ -1523,6 +1703,18 @@ public class BattleSimu extends javax.swing.JPanel {
                                     } else {
                                         sb.deleteCharAt(sb.length() - 1);
                                         sb.append("，被标记）");
+                                    }
+                                }
+                                if (typeDefence != 0) {
+                                    if (sb.indexOf("）") != -1) {
+                                        sb.deleteCharAt(sb.length() - 1).append("，");
+                                    } else {
+                                        sb.append("（");
+                                    }
+                                    if (typeDefence > 0) {
+                                        sb.append("抗性抵消").append(typeDefence).append("伤害）");
+                                    } else {
+                                        sb.append("抗性追加").append(-typeDefence).append("伤害）");
                                     }
                                 }
                                 if (enchDamage.equals(0)) {
@@ -1554,12 +1746,22 @@ public class BattleSimu extends javax.swing.JPanel {
                                         sb = new StringBuilder();
                                         sb.append(targetPart.getName()).append("被击破！\n");
                                         txtBattleInfo.append(sb.toString());
+                                    } else if (reflection != null) {
+                                        if (reflection.getValue()[1].equals(EnumPhysicsMagic.PM3.getIndex()) || reflection.getValue()[2].equals(EnumPhysicsMagic.getIndexById("ENCHANT"))) {
+                                            reflectDamage += enchDamage * reflection.getValue()[0] / 10000;
+                                        }
                                     }
                                 }
-
                                 applyDamageToParent(targetPart, enchDamage);
                             }
                         }
+                    }
+                    if (reflectDamage > 0) {
+                        reflectDamage = Math.min(reflectDamage, part.getCurrentAttr(EnumAttribute.getIndexById("HP")) - 1);
+                        part.changeCurrentAttr(-reflectDamage.intValue(), EnumAttribute.getIndexById("HP"));
+                        sb = new StringBuilder();
+                        sb.append(part.getName()).append("受到").append(reflectDamage).append("点反弹伤害。\n");
+                        txtBattleInfo.append(sb.toString());
                     }
                     if (drainRate > 0) {
                         Long drainDamage = totalDamage * drainRate / 100;
@@ -1616,6 +1818,12 @@ public class BattleSimu extends javax.swing.JPanel {
                     break;
                 case "GUARD_BREAK_FIXED":
                     executeAttrChangeFixed(skillRole, cardLevel, chain, chainBoostVal, realTargetParts, false);
+                    break;
+                case "ATTR_DEF_UP":
+                    executeAttrDefChange(skillRole, cardLevel, chain, chainBoostVal, realTargetParts, true);
+                    break;
+                case "ATTR_DEF_DOWN":
+                    executeAttrDefChange(skillRole, cardLevel, chain, chainBoostVal, realTargetParts, false);
                     break;
                 case "REGENERATE_FIXED":
                     attrVal = part.getCurrentAttr(EnumAttribute.getIndexById(skillRole[SKILL_ROLE_PARAM6]));
@@ -1831,8 +2039,8 @@ public class BattleSimu extends javax.swing.JPanel {
                     break;
                 case "DARKNESS_APPOINT":
                     buff = new BuffInfo(Integer.parseInt(skillRole[SKILL_ROLE_PARAM1]), turn, "DARKNESS",
-                            new Integer[]{Integer.parseInt(skillRole[SKILL_ROLE_PARAM2]), Integer.parseInt(skillRole[SKILL_ROLE_PARAM2]), Integer.parseInt(skillRole[SKILL_ROLE_PARAM2]),
-                                Integer.parseInt(skillRole[SKILL_ROLE_PARAM2]), Integer.parseInt(skillRole[SKILL_ROLE_PARAM2])}, "DARKNESS", false);
+                            new Integer[]{Integer.parseInt(skillRole[SKILL_ROLE_PARAM2]), Integer.parseInt(skillRole[SKILL_ROLE_PARAM3]), Integer.parseInt(skillRole[SKILL_ROLE_PARAM4]),
+                                Integer.parseInt(skillRole[SKILL_ROLE_PARAM5]), Integer.parseInt(skillRole[SKILL_ROLE_PARAM6])}, "DARKNESS", false);
                     setBuffToParts(buff, realTargetParts);
                     break;
                 case "HEAL_REVERSE":
@@ -1883,6 +2091,12 @@ public class BattleSimu extends javax.swing.JPanel {
                 case "COVERING":
                     val = Long.parseLong(skillRole[SKILL_ROLE_PARAM2]) / 10;
                     buff = new BuffInfo(Integer.parseInt(skillRole[SKILL_ROLE_PARAM1]), turn, "COVERING", new Integer[]{val.intValue()}, skillRole[SKILL_ROLE_FUNCTION_COL], true);
+                    setBuffToParts(buff, realTargetParts);
+                    break;
+                case "REFLECTION":
+                    val = Long.parseLong(skillRole[SKILL_ROLE_PARAM2]) + Long.parseLong(skillRole[SKILL_ROLE_PARAM3]) * cardLevel;
+                    buff = new BuffInfo(Integer.parseInt(skillRole[SKILL_ROLE_PARAM1]), turn, "REFLECTION",
+                            new Integer[]{val.intValue(), EnumPhysicsMagic.getIndexById(skillRole[SKILL_ROLE_PARAM4])}, skillRole[SKILL_ROLE_FUNCTION_COL], true);
                     setBuffToParts(buff, realTargetParts);
                     break;
                 case "STAN":
@@ -2053,6 +2267,19 @@ public class BattleSimu extends javax.swing.JPanel {
         setBuffToParts(buff, realTargetParts);
     }
 
+    private void executeAttrDefChange(String[] skillRole, Integer cardLevel, Integer chain, Long chainBoostVal, List<PartInfo> realTargetParts, boolean isBuff) {
+        Long val;
+        BuffInfo buff;
+        val = Long.parseLong(skillRole[SKILL_ROLE_PARAM4]) + (Long.parseLong(skillRole[SKILL_ROLE_PARAM5]) * cardLevel) / 1000;
+        val += chain * chainBoostVal;  // 0 = 1Chain, 3 = 4Chain.
+        if (!isBuff) {
+            val = -val;
+        }
+        buff = new BuffInfo(Integer.parseInt(skillRole[SKILL_ROLE_PARAM1]), turn, "ATTR_DEF_CHANGE", new Integer[]{val.intValue(),
+            EnumType.getIndexById(skillRole[SKILL_ROLE_PARAM6])}, skillRole[SKILL_ROLE_FUNCTION_COL], isBuff);
+        setBuffToParts(buff, realTargetParts);
+    }
+
     private void executeAttrChangeFixed(String[] skillRole, Integer cardLevel, Integer chain, Long chainBoostVal, List<PartInfo> realTargetParts, boolean isBuff) {
         Long val;
         BuffInfo buff;
@@ -2106,6 +2333,10 @@ public class BattleSimu extends javax.swing.JPanel {
                     if (buff.getValue()[1].equals(EnumAttribute.MAX_HP.getIndex())) {
                         part.changeCurrentAttr(buff.getValue()[0], EnumAttribute.HP.getIndex());
                     }
+                    part.getBuffs().get(buff.getBuffName()).add(buff);
+                    break;
+                case "ATTR_DEF_CHANGE":
+                    part.getTypeDef()[buff.getValue()[1]] += buff.getValue()[0];
                     part.getBuffs().get(buff.getBuffName()).add(buff);
                     break;
                 case "REGENERATE":
@@ -2199,6 +2430,12 @@ public class BattleSimu extends javax.swing.JPanel {
                     part.changeCurrentAttr(-part.getCurrentAttr(EnumAttribute.getIndexById("DDUC")), EnumAttribute.getIndexById("DDUC"));
                     part.changeCurrentAttr(buff.getValue()[0], EnumAttribute.getIndexById("DDUC"));
                     //part.getCurrentAttr()[EnumAttribute.getIndexById("DDUC")] = buff.getValue()[0];
+                    break;
+                case "REFLECTION":  // Replace without any condition.
+                    if (!part.getBuffs().get(buff.getBuffName()).isEmpty()) {
+                        part.getBuffs().get(buff.getBuffName()).clear();
+                    }
+                    part.getBuffs().get(buff.getBuffName()).add(buff);
                     break;
                 case "STAN":        // Replace if succeed.
                     Long prob = Math.round(Math.random() * 100 + 0.5);
@@ -2397,6 +2634,18 @@ public class BattleSimu extends javax.swing.JPanel {
                 }
                 txtBattleInfo.append(sb.toString());
                 break;
+            case "ATTR_DEF_CHANGE":
+                sb = new StringBuilder();
+                sb.append(buff.getTurnLeft()).append("回合间，").append(getTargetName(targetParts)).append("的");
+                sb.append(EnumType.getNameByIndex(buff.getValue()[1])).append("属性抗性");
+                if (buff.getValue()[0] > 0) {
+                    sb.append("提升").append(buff.getValue()[0]);
+                } else {
+                    sb.append("降低").append(-buff.getValue()[0]);
+                }
+                sb.append("点。\n");
+                txtBattleInfo.append(sb.toString());
+                break;
             case "REGENERATE":
                 sb = new StringBuilder();
                 sb.append(buff.getTurnLeft()).append("回合间，").append(getTargetName(targetParts)).
@@ -2470,6 +2719,13 @@ public class BattleSimu extends javax.swing.JPanel {
                 sb = new StringBuilder();
                 sb.append(buff.getTurnLeft()).append("回合间，对").append(getTargetName(targetParts)).
                         append("附加嘲讽效果，并减免伤害").append(buff.getValue()[0]).append("％。\n");
+                txtBattleInfo.append(sb.toString());
+                break;
+            case "REFLECTION":  // Replace without any condition.
+                sb = new StringBuilder();
+                sb.append(buff.getTurnLeft()).append("回合间，反弹").append(getTargetName(targetParts)).
+                        append("所受").append(EnumPhysicsMagic.getNameByIndex(buff.getValue()[1])).
+                        append("伤害的").append(buff.getValue()[0] / 100).append("％。\n");
                 txtBattleInfo.append(sb.toString());
                 break;
             case "STAN":    // Do nothing. Text output is done above.
@@ -2593,6 +2849,9 @@ public class BattleSimu extends javax.swing.JPanel {
                     part.changeCurrentAttr(-val, EnumAttribute.HP.getIndex());
                 }
                 break;
+            case "ATTR_DEF_CHANGE":
+                part.getTypeDef()[buff.getValue()[1]] -= buff.getValue()[0];
+                break;
             case "REGENERATE":
                 // Do nothing. (Thus regeneration that last 1 turn has no effect.)
                 break;
@@ -2624,6 +2883,9 @@ public class BattleSimu extends javax.swing.JPanel {
             case "COVERING":    // Replace without any condition.
                 part.changeCurrentAttr(-part.getCurrentAttr(EnumAttribute.getIndexById("DDUC")), EnumAttribute.getIndexById("DDUC"));
                 //part.getCurrentAttr()[EnumAttribute.getIndexById("DDUC")] = 0;
+                break;
+            case "REFLECTION":    // Replace without any condition.
+                // Do nothing.
                 break;
             case "STAN":        // Replace if succeed.
                 // Do nothing.
@@ -2810,6 +3072,11 @@ public class BattleSimu extends javax.swing.JPanel {
             if (arthurList.get(i).getCurrentAttr(EnumAttribute.getIndexById("DDUC")) > 0) {
                 sb.append("<br>").append("伤害减免：").append(arthurList.get(i).getCurrentAttr(EnumAttribute.getIndexById("DDUC"))).append("％");
             }
+            for(int j = 0; j < arthurList.get(i).getTypeDef().length; j++){
+                if(!arthurList.get(i).getTypeDef()[j].equals(0)){
+                    sb.append("<br>　").append(EnumType.getNameByIndex(j)).append("抗性：").append(arthurList.get(i).getTypeDef()[j]);
+                }
+            }
             sb.append("</html>");
             arStatus.get(i).setToolTipText(sb.toString());
             arStatus.get(i).repaint();
@@ -2838,6 +3105,18 @@ public class BattleSimu extends javax.swing.JPanel {
             handSource = arthur.getHandSpheres();
             skillSource = arthur.getSpheres();
         }
+        lblSetCards.setText(Integer.toString(arthur.getSetCards().size()));
+        if (arthur.getSetCards().size() > 0) {
+            sb = new StringBuilder();
+            for (SetCard setCard : arthur.getSetCards()) {
+                sb.append("<html>【设置中卡牌】<br>");
+                sb.append(setCard.getCardInfo().getSkill().getCardName()).append("（").append(setCard.getDelayedTurnLeft()).append("回合）<br>");
+            }
+            sb.delete(sb.length() - 4, sb.length()).append("</html>");
+            lblSetCards.setToolTipText(sb.toString());
+        } else {
+            lblSetCards.setToolTipText(null);
+        }
         for (int i = 0; i < 5; i++) {
             if (handSource == null || handSource[i] == null) {
                 btlCardName.get(i).setText("");
@@ -2852,7 +3131,7 @@ public class BattleSimu extends javax.swing.JPanel {
             } else {
                 ArthurSkill arSkill = skillSource.get(handSource[i].getSkillId());
                 List<String[]> skill = skillMap.get(handSource[i].getSkillId());
-                if (!arthur.getDarknessPos()[i]) {
+                if (!arthur.getDarknessPos()[i] || !showCards) {
                     btlCardName.get(i).setText(arSkill.getCardName());
                     btlCardInfo.get(i).setText(arSkill.getBriefDescription());
                     btlCardValue.get(i).setText(handSource[i].getValue().toString());
@@ -2914,7 +3193,13 @@ public class BattleSimu extends javax.swing.JPanel {
                 if (handSource[i].getIsSealed() > 0) {
                     btlCardAction.get(i).setText("封印中");
                 } else if (btlCardAction.get(i).isSelected()) {
-                    btlCardAction.get(i).setText("已使用（" + handSource[i].getPlayedOrder() + "）");
+                    if (handSource[i].getDelayedTurn() > 0) {
+                        btlCardAction.get(i).setText("已设置（" + handSource[i].getPlayedOrder() + "）");
+                    } else {
+                        btlCardAction.get(i).setText("已使用（" + handSource[i].getPlayedOrder() + "）");
+                    }
+                } else if (handSource[i].getDelayedTurn() > 0) {
+                    btlCardAction.get(i).setText("设置卡牌（" + handSource[i].getDelayedTurn() + "回合）");
                 } else {
                     btlCardAction.get(i).setText("使用卡牌");
                 }
@@ -3030,6 +3315,7 @@ public class BattleSimu extends javax.swing.JPanel {
             if (card.getTarget() != null) {
                 card.setTarget(null);
                 card.setIsPlayed(false);
+                card.setDelayedTurn(0);
                 Integer playedOrder = card.getPlayedOrder();
                 arthur.getCurrentPlayedItem().remove(playedOrder - 1);   // Since playedOrder start from 1.
                 arthur.setCostUsed(arthur.getCostUsed()
@@ -3125,27 +3411,34 @@ public class BattleSimu extends javax.swing.JPanel {
                 if (card == null) {
                     continue;
                 }
-                card.setCurrentChain(0);
-                String skillType = skillMap.get(card.getSkillId()).get(0)[10];
-                String[] skillTypes = skillType.split("_");
-                Integer chain = 0;
-                for (int j = 0; j < 4; j++) {
-                    if (j == i) {
-                        continue;   // Do not count own card as chain.
-                    }
-                    Boolean hasChain = false;
-                    for (String type : skillTypes) {
-                        if (currentChains[j][EnumType.getIndexById(type)]) {
-                            hasChain = true;
-                        }
-                    }
-                    if (hasChain) {
-                        chain++;
-                    }
-                }
-                card.setCurrentChain(chain);
+                computeSingleCardChain(card, i);
+            }
+            for (SetCard setCard : arthur.getSetCards()) {
+                computeSingleCardChain(setCard.getCardInfo(), i);
             }
         }
+    }
+
+    public void computeSingleCardChain(HandCardInfo card, int arthurIndex) {
+        card.setCurrentChain(0);
+        String skillType = skillMap.get(card.getSkillId()).get(0)[SKILL_TYPES];
+        String[] skillTypes = skillType.split("_");
+        Integer chain = 0;
+        for (int j = 0; j < 4; j++) {
+            if (j == arthurIndex) {
+                continue;   // Do not count own card as chain.
+            }
+            Boolean hasChain = false;
+            for (String type : skillTypes) {
+                if (currentChains[j][EnumType.getIndexById(type)]) {
+                    hasChain = true;
+                }
+            }
+            if (hasChain) {
+                chain++;
+            }
+        }
+        card.setCurrentChain(chain);
     }
 
     // Go through all current cards in hand, check if the boost condition is matched.
@@ -3163,7 +3456,7 @@ public class BattleSimu extends javax.swing.JPanel {
                     continue;
                 }
                 String[] skill = skills.get(skills.size() - 1);
-                card.setBoostPriority(checkIsBoost(skill, i, true, card.getTarget()));
+                card.setBoostPriority(checkIsBoost(skill, i, true, card.getTarget(), false));
 
             }
         }
@@ -3186,6 +3479,11 @@ public class BattleSimu extends javax.swing.JPanel {
                 String[] skill = skills.get(card.getBoostPriority());
                 cardLevel = EnumCardLevel.getLevel(arthur.getDeck().get(card.getSkillId()).getRarity());
                 card.setValue(computeFunctionValues(skill, cardLevel, arthur));
+                if (skill[SKILL_TRIGGER_LAST].trim().isEmpty()) {
+                    card.setDelayedTurn(0);
+                } else {
+                    card.setDelayedTurn(Integer.parseInt(skill[SKILL_TRIGGER_LAST]));
+                }
             }
 
             for (HandCardInfo card : arthur.getHandSpheres()) {
@@ -3197,6 +3495,7 @@ public class BattleSimu extends javax.swing.JPanel {
                 String[] skill = skills.get(card.getBoostPriority());
                 cardLevel = EnumCardLevel.getLevel(arthur.getSpheres().get(card.getSkillId()).getRarity());
                 card.setValue(computeFunctionValues(skill, cardLevel, arthur));
+                card.setDelayedTurn(0);
             }
         }
     }
@@ -3211,7 +3510,7 @@ public class BattleSimu extends javax.swing.JPanel {
 //        Integer[] attr = arthur.getCurrentAttr();
         Long val;
         Integer atkOpVal = 0;
-        List<String[]> skillRoleList = skillRoleMap.get(skill[27]);
+        List<String[]> skillRoleList = skillRoleMap.get(skill[SKILL_SKILLROLE_COL]);
         for (String[] skillRole : skillRoleList) {
             String function = skillRole[SKILL_ROLE_FUNCTION_COL];
             switch (function) {
@@ -3245,6 +3544,12 @@ public class BattleSimu extends javax.swing.JPanel {
                     return val.intValue();
                 case "GUARD_BREAK_FIXED":
                     val = Long.parseLong(skillRole[SKILL_ROLE_PARAM3]) * (Long.parseLong(skillRole[SKILL_ROLE_PARAM4]) + Long.parseLong(skillRole[SKILL_ROLE_PARAM5]) * cardLevel) / 1000;
+                    return val.intValue();
+                case "ATTR_DEF_UP":
+                    val = Long.parseLong(skillRole[SKILL_ROLE_PARAM4]) + Long.parseLong(skillRole[SKILL_ROLE_PARAM5]) * cardLevel / 1000;
+                    return val.intValue();
+                case "ATTR_DEF_DOWN":
+                    val = Long.parseLong(skillRole[SKILL_ROLE_PARAM4]) + Long.parseLong(skillRole[SKILL_ROLE_PARAM5]) * cardLevel / 1000;
                     return val.intValue();
                 case "REGENERATE_FIXED":
                     val = Long.parseLong(skillRole[SKILL_ROLE_PARAM2]) + Long.parseLong(skillRole[SKILL_ROLE_PARAM3]) * cardLevel / 1000;
@@ -3319,6 +3624,9 @@ public class BattleSimu extends javax.swing.JPanel {
                     break;
                 case "COVERING":
                     return Integer.parseInt(skillRole[SKILL_ROLE_PARAM2]) / 10;
+                case "REFLECTION":
+                    val = (Long.parseLong(skillRole[SKILL_ROLE_PARAM2]) + Long.parseLong(skillRole[SKILL_ROLE_PARAM3]) * cardLevel) / 100;
+                    return val.intValue();
                 case "STAN":
                     break;
                 case "ATK_OP_ATTR_RATE_DOWN_INVALID":
@@ -3347,16 +3655,26 @@ public class BattleSimu extends javax.swing.JPanel {
     }
 
     /**
-     *
+     * @param isTrigger - true for testing trigger condition, false for normal
+     * boost condition
      * @param skill
      * @param partIndex
-     * @return an Integer. 0 = not boosted, 1+ = boosted priority. priority
+     * @return an Integer. 0 = not boosted, 1+ = boosted priority / skill
+     * trigger last time.
      */
-    private Integer checkIsBoost(String[] skill, Integer partIndex, boolean isArthur, Integer[] skillTarget) {
-        String skillId = skill[0];
-        String condition = skill[20];
-        String param1 = skill[21];
-        String param2 = skill[22];
+    private Integer checkIsBoost(String[] skill, Integer partIndex, boolean isArthur, Integer[] skillTarget, boolean isTrigger) {
+        String skillId = skill[SKILL_ID], condition = null, param1 = null, param2 = null, skillPriorityIndex = null;
+        if (isTrigger) {
+            condition = skill[SKILL_TRIGGER_CONDITION];
+            param1 = skill[SKILL_TRIGGER_PARAM1];
+            param2 = skill[SKILL_TRIGGER_PARAM2];
+            skillPriorityIndex = skill[SKILL_TRIGGER_LAST];
+        } else {
+            condition = skill[SKILL_BOOST_CONDITION];
+            param1 = skill[SKILL_BOOST_PARAM1];
+            param2 = skill[SKILL_BOOST_PARAM2];
+            skillPriorityIndex = skill[SKILL_PRIORITY];
+        }
         int i;
         if (condition.isEmpty()) {
             log.error("ERROR.");  // Should not happen.
@@ -3373,7 +3691,7 @@ public class BattleSimu extends javax.swing.JPanel {
                     }
                 }
                 if (i >= Integer.parseInt(param2)) {
-                    return Integer.parseInt(skill[26]);
+                    return Integer.parseInt(skillPriorityIndex);
                 }
                 break;
             case "TURN":                        // APPLY TO BOTH
@@ -3381,7 +3699,7 @@ public class BattleSimu extends javax.swing.JPanel {
                     param2 = "999";
                 }
                 if (turn >= Integer.parseInt(param1) && turn <= Integer.parseInt(param2)) {
-                    return Integer.parseInt(skill[26]);
+                    return Integer.parseInt(skillPriorityIndex);
                 }
                 break;
             case "SELF_HP_PER":                 // APPLY TO BOTH
@@ -3400,14 +3718,14 @@ public class BattleSimu extends javax.swing.JPanel {
                 }
                 log.warn("WARN: " + skillId);
                 if (hpPer >= Integer.parseInt(param1) && hpPer <= Integer.parseInt(param2)) {
-                    return Integer.parseInt(skill[26]);
+                    return Integer.parseInt(skillPriorityIndex);
                 }
                 break;
             case "DECK_COMBO_COUNT":            // APPLY TO ARTHUR
                 for (HandCardInfo card : arthurList.get(partIndex).getHandCards()) {
                     if (card != null && card.getSkillId().equals(skillId)
                             && (card.getCurrentChain() + 1) >= Integer.parseInt(param1)) {
-                        return Integer.parseInt(skill[26]);
+                        return Integer.parseInt(skillPriorityIndex);
                     }
                 }
                 break;
@@ -3430,7 +3748,7 @@ public class BattleSimu extends javax.swing.JPanel {
                 // Check buffs.
                 for (PartInfo part : targetParts) {
                     if (part.getBuffs().containsKey(param1) && !part.getBuffs().get(param1).isEmpty()) {
-                        return Integer.parseInt(skill[26]);
+                        return Integer.parseInt(skillPriorityIndex);
                     }
                 }
                 break;
@@ -3453,7 +3771,7 @@ public class BattleSimu extends javax.swing.JPanel {
                 // Check buffs.
                 for (PartInfo part : targetParts) {
                     if (part.getBuffs().containsKey(param1) && !part.getBuffs().get(param1).isEmpty()) {
-                        return Integer.parseInt(skill[26]);
+                        return Integer.parseInt(skillPriorityIndex);
                     }
                 }
                 break;
@@ -3463,12 +3781,12 @@ public class BattleSimu extends javax.swing.JPanel {
                 } else if (skillTarget[0] == 1) {  // Target = enemy
                     if (skillTarget[1] != 4) {
                         if (enemyList.get(skillTarget[1]).getType().equals(param1)) {
-                            return Integer.parseInt(skill[26]);
+                            return Integer.parseInt(skillPriorityIndex);
                         }
                     } else {
                         for (EnemyInfo enemy : enemyList) {
                             if (enemy.getType().equals(param1)) {
-                                return Integer.parseInt(skill[26]);
+                                return Integer.parseInt(skillPriorityIndex);
                             }
                         }
                     }
@@ -3489,7 +3807,7 @@ public class BattleSimu extends javax.swing.JPanel {
                     }
                 }
                 if (i >= Integer.parseInt(param2)) {
-                    return Integer.parseInt(skill[26]);
+                    return Integer.parseInt(skillPriorityIndex);
                 }
                 break;
             case "SELF_OTHER_PLAY_RARITY":          // APPLY TO ARTHUR
@@ -3500,32 +3818,32 @@ public class BattleSimu extends javax.swing.JPanel {
                     }
                 }
                 if (i >= Integer.parseInt(param2)) {
-                    return Integer.parseInt(skill[26]);
+                    return Integer.parseInt(skillPriorityIndex);
                 }
                 break;
             case "RANDOM":                          // APPLY TO ENEMY
                 Long prob = Math.round(Math.random() * 100 + 0.5);
                 if (prob <= Integer.parseInt(param1)) {
-                    return Integer.parseInt(skill[26]);
+                    return Integer.parseInt(skillPriorityIndex);
                 }
                 break;
             case "USER_SIDE_DEBUFF":               // APPLY TO BOTH
                 for (ArthurInfo arthur : arthurList) {
                     if (arthur.getBuffs().containsKey(param1) && !arthur.getBuffs().get(param1).isEmpty()) {
-                        return Integer.parseInt(skill[26]);
+                        return Integer.parseInt(skillPriorityIndex);
                     }
                 }
                 break;
             case "ENEMY_SIDE_DEBUFF":               // APPLY TO BOTH
                 for (EnemyInfo enemy : enemyList) {
                     if (enemy.getBuffs().containsKey(param1) && !enemy.getBuffs().get(param1).isEmpty()) {
-                        return Integer.parseInt(skill[26]);
+                        return Integer.parseInt(skillPriorityIndex);
                     }
                 }
                 break;
             case "SELF_ENEMY_AI_FLAG":              // APPLY TO ENEMY
                 if (enemyTriggerAiFlag.containsKey(param1) && enemyTriggerAiFlag.get(param1).equals(1)) {
-                    return Integer.parseInt(skill[26]);
+                    return Integer.parseInt(skillPriorityIndex);
                 }
                 break;
             case "SELF_DEBUFF":                     // APPLY TO BOTH
@@ -3537,7 +3855,7 @@ public class BattleSimu extends javax.swing.JPanel {
                 }
                 // Check buffs.
                 if (debuffs.containsKey(param1) && !debuffs.get(param1).isEmpty()) {
-                    return Integer.parseInt(skill[26]);
+                    return Integer.parseInt(skillPriorityIndex);
                 }
                 break;
             case "SELF_BUFF":                     // APPLY TO BOTH
@@ -3549,7 +3867,7 @@ public class BattleSimu extends javax.swing.JPanel {
                 }
                 // Check buffs.
                 if (buffs.containsKey(param1) && !buffs.get(param1).isEmpty()) {
-                    return Integer.parseInt(skill[26]);
+                    return Integer.parseInt(skillPriorityIndex);
                 }
                 break;
             default:
@@ -3571,11 +3889,31 @@ public class BattleSimu extends javax.swing.JPanel {
     }
 
     private Integer getTurnCost() {
-        Integer cost = turn + 2;
+        Integer cost = turn + initialCost - 1;
         if (cost > 10) {
             cost = 10;
         }
         return cost;
+    }
+
+    public Boolean setInitialCost(Integer initialCost) {
+        Integer oldInitialCost = this.initialCost;
+        this.initialCost = initialCost;
+        Integer cost = getTurnCost();
+        for (int i = 0; i < 4; i++) {
+            if (cost - arthurList.get(i).getCostUsed() - arthurList.get(i).getCostBlocked() < 0) {
+                this.initialCost = oldInitialCost;
+                JOptionPane.showMessageDialog(this, "更改后的COST不足以完成现有行动。", "提示", JOptionPane.INFORMATION_MESSAGE);
+                return false;
+            }
+        }
+        refreshArthurUI();
+        for (int i = 0; i < 4; i++) {
+            if (arStatusTButton.get(i).isSelected()) {
+                refreshCardUI(i);
+            }
+        }
+        return true;
     }
 
     /**
@@ -3745,6 +4083,24 @@ public class BattleSimu extends javax.swing.JPanel {
         btnStartAgain.setEnabled(!halt);
     }
 
+    private Boolean hasTurnZeroSkill() {
+        EnemySkill action;
+        String[] enemyAiOrder;
+        for (EnemyInfo enemy : enemyList) {
+            for (int i = 0; i < enemy.getSkills().size(); i++) {
+                action = enemy.getSkills().get(i);
+                enemyAiOrder = enemyAiOrderMap.get(action.getAiOrderId());
+                // Check cost and ai order conditions.
+                if (enemy.getActionPoint() < action.getCost() || !aiOrderSatisfied(enemyAiOrder, enemy, true)
+                        || action.getMaxTimes() <= 0) {
+                    continue;
+                }
+                return true;
+            }
+        }
+        return false;
+    }
+
     private void startAgain() {
         if (JOptionPane.showConfirmDialog(this, "确定要重新开始吗？", "提醒", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE)
                 == JOptionPane.YES_OPTION) {
@@ -3799,6 +4155,7 @@ public class BattleSimu extends javax.swing.JPanel {
     private List<JLabel> btlCardBonus;
     private List<JToggleButton> btlCardAction;
     private List<GroupLayout> btlCardLayout;
+    private JLabel lblSetCards;
 
     // Enemy Status
     private List<GradientPanel> enStatus;
@@ -3952,6 +4309,7 @@ public class BattleSimu extends javax.swing.JPanel {
         btlCardBonus = new ArrayList<>();
         btlCardAction = new ArrayList<>();
         btlCardLayout = new ArrayList<>();
+        lblSetCards = new JLabel();
 
         for (int i = 0; i < 4; i++) {
             targetButtons.add(new JButton());
@@ -4078,10 +4436,10 @@ public class BattleSimu extends javax.swing.JPanel {
         panCost.setLayout(panCostLayout);
         panCostLayout.setHorizontalGroup(
                 panCostLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                .addGap(5, 5, 5)
+                .addGap(3, 3, 3)
                 .addComponent(lblCost, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                 .addComponent(lblCost2, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                .addGap(5, 5, 5)
+                .addGap(3, 3, 3)
         );
         panCostLayout.setVerticalGroup(
                 panCostLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -4092,6 +4450,11 @@ public class BattleSimu extends javax.swing.JPanel {
                         .addContainerGap())
         );
 
+        lblSetCards.setBorder(javax.swing.BorderFactory.createTitledBorder("设置卡牌数"));
+        lblSetCards.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
+        lblSetCards.setFont(new java.awt.Font("宋体", 0, 12));
+        lblSetCards.setText("0");
+        ((TitledBorder) lblSetCards.getBorder()).setTitleFont(new java.awt.Font("宋体", 0, 12));
         panBattleCmd.setBorder(javax.swing.BorderFactory.createTitledBorder("战斗操作界面"));
         ((TitledBorder) panBattleCmd.getBorder()).setTitleFont(new java.awt.Font("宋体", 0, 12));
         javax.swing.GroupLayout panBattleCmdLayout = new javax.swing.GroupLayout(panBattleCmd);
@@ -4102,7 +4465,8 @@ public class BattleSimu extends javax.swing.JPanel {
                         .addGroup(panBattleCmdLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                                 .addGroup(panBattleCmdLayout.createSequentialGroup()
                                         .addGroup(panBattleCmdLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                                                .addComponent(panCost, javax.swing.GroupLayout.DEFAULT_SIZE, 90, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                                .addComponent(panCost, javax.swing.GroupLayout.DEFAULT_SIZE, 95, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                                .addComponent(lblSetCards, javax.swing.GroupLayout.DEFAULT_SIZE, 95, javax.swing.GroupLayout.PREFERRED_SIZE)
                                                 .addComponent(btnSwitch, javax.swing.GroupLayout.DEFAULT_SIZE, 95, javax.swing.GroupLayout.PREFERRED_SIZE))
                                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                                         .addComponent(panCards, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
@@ -4113,8 +4477,10 @@ public class BattleSimu extends javax.swing.JPanel {
                 .addGroup(panBattleCmdLayout.createSequentialGroup()
                         .addGroup(panBattleCmdLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, true)
                                 .addGroup(panBattleCmdLayout.createSequentialGroup()
-                                        .addComponent(btnSwitch, javax.swing.GroupLayout.PREFERRED_SIZE, 90, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                        .addGap(4, 4, 4)
+                                        .addComponent(btnSwitch, javax.swing.GroupLayout.PREFERRED_SIZE, 50, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                        .addGap(3, 3, 3)
+                                        .addComponent(lblSetCards, javax.swing.GroupLayout.PREFERRED_SIZE, 45, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                        .addGap(3, 3, 3)
                                         .addComponent(panCost, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
                                 .addComponent(panCards, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
                         .addComponent(panTargets, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
@@ -4484,6 +4850,7 @@ public class BattleSimu extends javax.swing.JPanel {
             refreshEnemyUI();
             lblTitle.setText("第" + turn + "回合");
             txtBattleInfo.append("◎◎◎◎◎◎◎◎◎◎◎◎◎◎◎回到第" + turn + "回合◎◎◎◎◎◎◎◎◎◎◎◎◎◎◎\n\n");
+            txtBattleInfo.setCaretPosition(txtBattleInfo.getText().length());
             for (int i = 0; i < 4; i++) {
                 if (arStatusTButton.get(i).isSelected()) {
                     refreshCardUI(i);

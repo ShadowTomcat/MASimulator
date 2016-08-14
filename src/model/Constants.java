@@ -31,6 +31,37 @@ public class Constants {
     public static final int SKILL_ROLE_PARAM9 = 27;
     public static final int SKILL_ROLE_PARAM10 = 28;
     
+    public static final int SKILL_ID = 0;
+    public static final int SKILL_CATEGORY = 9;
+    public static final int SKILL_TYPES = 10;
+    public static final int SKILL_PVE_PRIORITY = 14;
+    public static final int SKILL_TARGET = 18;
+    public static final int SKILL_SKILLROLE_COL = 35;
+    public static final int SKILL_CHAIN_BOOST = 27;
+    public static final int SKILL_BOOST_CONDITION = 28;
+    public static final int SKILL_BOOST_PARAM1 = 29;
+    public static final int SKILL_BOOST_PARAM2 = 30;
+    public static final int SKILL_BOOST_PARAM3 = 31;
+    public static final int SKILL_PRIORITY = 34;
+    
+    public static final int SKILL_TRIGGER_TIME = 19;
+    public static final int SKILL_TRIGGER_LAST = 20;
+    public static final int SKILL_TRIGGER_CONDITION = 21;
+    public static final int SKILL_TRIGGER_PARAM1 = 22;
+    public static final int SKILL_TRIGGER_PARAM2 = 23;
+    public static final int SKILL_TRIGGER_PARAM3 = 24;
+    
+    public static final int ENEMY_AI_CONDITION = 1;
+    public static final int ENEMY_AI_LOW_HP = 2;
+    public static final int ENEMY_AI_HIGH_HP = 3;;
+    public static final int ENEMY_AI_MAIN_LOW_HP = 4;
+    public static final int ENEMY_AI_MAIN_HIGH_HP = 5;
+    public static final int ENEMY_AI_TRIGGER_TYPE = 28;
+    public static final int ENEMY_AI_TRIGGER_PARAM1 = 29;
+    public static final int ENEMY_AI_TRIGGER_PARAM2 = 30;
+    public static final int ENEMY_AI_TRIGGER_PARAM3 = 31;
+    public static final int ENEMY_AI_TURN_SHIFT = 6;
+    
     public static final Comparator HAND_CARD_CMP = new Comparator<HandCardInfo>() {
         @Override
         public int compare(HandCardInfo o1, HandCardInfo o2) {

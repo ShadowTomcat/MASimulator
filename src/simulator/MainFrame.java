@@ -5,7 +5,6 @@
  */
 package simulator;
 
-import autoupdate.AutoUpdater;
 import java.awt.Dimension;
 import java.awt.Toolkit;
 import java.io.File;
@@ -13,7 +12,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import javax.swing.JDialog;
 import javax.swing.JFrame;
-import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import org.apache.log4j.PropertyConfigurator;
 import swing.InformationDialog;
@@ -51,6 +49,7 @@ public class MainFrame extends javax.swing.JFrame {
         mnuTest = new javax.swing.JMenu();
         mnuBack = new javax.swing.JMenuItem();
         mnuCardSelection = new javax.swing.JCheckBoxMenuItem();
+        mnuExpendCost = new javax.swing.JMenuItem();
         jMenu1 = new javax.swing.JMenu();
         mnuHelp = new javax.swing.JMenuItem();
         mnuAbout = new javax.swing.JMenuItem();
@@ -98,6 +97,14 @@ public class MainFrame extends javax.swing.JFrame {
 
         mnuCardSelection.setText("上帝之手");
         mnuTest.add(mnuCardSelection);
+
+        mnuExpendCost.setText("王之财宝");
+        mnuExpendCost.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                mnuExpendCostActionPerformed(evt);
+            }
+        });
+        mnuTest.add(mnuExpendCost);
 
         jMenuBar1.add(mnuTest);
 
@@ -164,6 +171,14 @@ public class MainFrame extends javax.swing.JFrame {
     private void mnuBackActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_mnuBackActionPerformed
         UIUtil.getBattleSimu().revertTurnInfo();
     }//GEN-LAST:event_mnuBackActionPerformed
+
+    private void mnuExpendCostActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_mnuExpendCostActionPerformed
+        JDialog dialog = new JDialog(this, "初始COST设置", true);
+        dialog.add(new SetInitCostPanel());
+        dialog.pack();
+        dialog.setLocationRelativeTo(this);
+        dialog.setVisible(true);
+    }//GEN-LAST:event_mnuExpendCostActionPerformed
     
     public void switchPanel(String panelName) {
         if (currentPanel != null) {
@@ -273,6 +288,7 @@ public class MainFrame extends javax.swing.JFrame {
     private javax.swing.JMenuItem mnuBattle;
     private javax.swing.JCheckBoxMenuItem mnuCardSelection;
     private javax.swing.JMenuItem mnuDeck;
+    private javax.swing.JMenuItem mnuExpendCost;
     private javax.swing.JMenuItem mnuHelp;
     private javax.swing.JMenuItem mnuSphere;
     private javax.swing.JMenu mnuTest;
@@ -302,25 +318,6 @@ public class MainFrame extends javax.swing.JFrame {
         
         FileUtils.initDummy();
         UIUtil.setMainFrame(this);
-    }
-    
-    private void versionUpdate() {
-        if (AutoUpdater.doCheck()) {
-            Object[] options = {"更新", "取消"};
-            int response = JOptionPane.showOptionDialog(this, "系统检测到新版本，是否更新？", "版本更新", JOptionPane.YES_NO_OPTION, JOptionPane.INFORMATION_MESSAGE, null, options, options[0]);
-            
-            if (response == 0) {
-                new Thread(() -> {
-                    this.setEnabled(false);
-                    InformationDialog dialog = UIUtil.showInfoDialog(this, "下载资源中……");
-                    AutoUpdater.doDownload();//从服务器下载更新版本                        
-                    UIUtil.hideInfoDialog(dialog);
-                    //UIUtil.getLogInFrame().setEnabled(true);
-                    JOptionPane.showMessageDialog(this, "更新完成，请重启程序。", "版本更新", JOptionPane.INFORMATION_MESSAGE);
-                    System.exit(0);
-                }).start();
-            }
-        }
     }
     
     public boolean cardSelectionEnabled() {

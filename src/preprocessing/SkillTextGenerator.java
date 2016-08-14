@@ -28,6 +28,10 @@ import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import util.FileUtils;
 import static model.Constants.*;
+import model.Enums;
+import model.Enums.EnumAttribute;
+import model.Enums.EnumPhysicsMagic;
+import model.Enums.EnumType;
 
 /**
  *
@@ -77,8 +81,8 @@ public class SkillTextGenerator {
     }
 
     private static void loadData() {
-        skillMap = FileUtils.loadListMap("skill.csv");
-        skillRoleMap = FileUtils.loadListMap("skill_role.csv");
+        skillMap = FileUtils.loadListMap("skill_player.csv", null);
+        skillRoleMap = FileUtils.loadListMap("skill_role_player.csv", null);
         cardList = FileUtils.loadList("card.csv");
         sphereList = FileUtils.loadList("sphr.csv");
     }
@@ -171,7 +175,7 @@ public class SkillTextGenerator {
 
             skillArrayBase = skillMap.get(skillId).get(0);
             skillArray = skillMap.get(skillId).get(skillMap.get(skillId).size() - 1);
-            skillRoleArray = skillRoleMap.get(skillArray[27]);
+            skillRoleArray = skillRoleMap.get(skillArray[SKILL_SKILLROLE_COL]);
             Collections.sort(skillRoleArray, cmp);
             // Class
             cell = getNotNullCell(row, colCount++);
@@ -243,16 +247,16 @@ public class SkillTextGenerator {
             // Attack Dialogue
             cell = getNotNullCell(row, colCount++);
             cell.setCellStyle(styleCell.getCellStyle());
-            if (card.length > 94) {
-                cell.setCellValue(card[94]);
+            if (card.length > 93) {
+                cell.setCellValue(card[93]);
             } else {
                 cell.setCellValue("");
             }
             // Support Dialogue
             cell = getNotNullCell(row, colCount++);
             cell.setCellStyle(styleCell.getCellStyle());
-            if (card.length > 95) {
-                cell.setCellValue(card[95]);
+            if (card.length > 94) {
+                cell.setCellValue(card[94]);
             } else {
                 cell.setCellValue("");
             }
@@ -267,38 +271,39 @@ public class SkillTextGenerator {
     }
 
     private static String getFunctionText(String skillId, String rareLevel) {
-        String boostCondition;
+        String boostCondition, triggerCondition;
         String[] skillArray, skillArrayBase;
         List<String[]> skillRoleArray, skillRoleArrayBase;
 
         skillArrayBase = skillMap.get(skillId).get(0);
         skillArray = skillMap.get(skillId).get(skillMap.get(skillId).size() - 1);
-        skillRoleArrayBase = skillRoleMap.get(skillArrayBase[27]);
-        skillRoleArray = skillRoleMap.get(skillArray[27]);
+        skillRoleArrayBase = skillRoleMap.get(skillArrayBase[SKILL_SKILLROLE_COL]);
+        skillRoleArray = skillRoleMap.get(skillArray[SKILL_SKILLROLE_COL]);
         Collections.sort(skillRoleArrayBase, cmp);
         Collections.sort(skillRoleArray, cmp);
 
         // Boost Condition
-        boostCondition = getSkillBoostCondition(skillArray);
+        boostCondition = getSkillBoostCondition(skillArray, false);
+        triggerCondition = getSkillBoostCondition(skillArray, true);
         StringBuilder sb, sb_diffTarget, sbBoost, sbBoost_diffTarget;
         TreeMap<Integer, String> normalFunctions, boostFunctions;
         // Detail functions and target.
         normalFunctions = new TreeMap<>();
-        normalFunctions.put(0, targetMap.get(skillArrayBase[18]));
+        normalFunctions.put(0, targetMap.get(skillArrayBase[SKILL_TARGET]));
         for (int j = 0; j < skillRoleArrayBase.size(); j++) {
-            System.out.println(skillRoleArrayBase.get(j)[SKILL_ROLE_FUNCTION_COL]);
+            //System.out.println(skillRoleArrayBase.get(j)[SKILL_ROLE_FUNCTION_COL]);
             int key = functionOrderMap.get(skillRoleArrayBase.get(j)[SKILL_ROLE_FUNCTION_COL]);
             while (normalFunctions.containsKey(key)) {
                 key++;
             }
             normalFunctions.put(key, getFunctionValue(skillArrayBase, skillRoleArrayBase, j, rareLevel));
         }
-        if (skillArrayBase[19].equals("30")) {
+        if (skillArrayBase[SKILL_CHAIN_BOOST].equals("30")) {
             normalFunctions.put(400, "提升chain威力");
         }
 
         boostFunctions = new TreeMap<>();
-        boostFunctions.put(0, targetMap.get(skillArray[18]));
+        boostFunctions.put(0, targetMap.get(skillArray[SKILL_TARGET]));
         for (int j = 0; j < skillRoleArray.size(); j++) {
             int key = functionOrderMap.get(skillRoleArray.get(j)[SKILL_ROLE_FUNCTION_COL]);
             while (boostFunctions.containsKey(key)) {
@@ -306,7 +311,7 @@ public class SkillTextGenerator {
             }
             boostFunctions.put(key, getFunctionValue(skillArray, skillRoleArray, j, rareLevel));
         }
-        if (skillArray[19].equals("30")) {
+        if (skillArray[SKILL_CHAIN_BOOST].equals("30")) {
             boostFunctions.put(400, "提升chain威力");
         }
 
@@ -316,6 +321,10 @@ public class SkillTextGenerator {
         sbBoost_diffTarget = new StringBuilder();
         // Merge function lists into string.
         String normalStr, boostStr;
+        // Trigger
+        if (triggerCondition != null && !triggerCondition.isEmpty()) {
+            sb.append(triggerCondition);
+        }
         while (normalFunctions.size() > 0) {
             Map.Entry<Integer, String> pollFirstEntry = normalFunctions.pollFirstEntry();
             normalStr = pollFirstEntry.getValue();
@@ -364,7 +373,7 @@ public class SkillTextGenerator {
 
         if (boostCondition != null && !boostCondition.isEmpty()) {
             sb.append("，").append(boostCondition);
-        };
+        }
         if (sbBoost.length() > 0) {
             sbBoost.deleteCharAt(sbBoost.length() - 1);
             sb.append(sbBoost);
@@ -445,6 +454,8 @@ public class SkillTextGenerator {
         functionMap.put("ATK_OP_REVENGE", "反伤");
         functionMap.put("DEAL_BONUS", "抽卡");
         functionMap.put("DEF_UP_FIXED", "防御提升");
+        functionMap.put("ATTR_DEF_UP", "属性抗性提升");
+        functionMap.put("ATTR_DEF_DOWN", "属性抗性降低");
         functionMap.put("DEBUFF_RELEASE_ONE", "解除异常");
         functionMap.put("GUARD_BREAK_FIXED", "防御弱化");
         functionMap.put("ATK_BREAK_FIXED", "攻击弱化");
@@ -460,6 +471,7 @@ public class SkillTextGenerator {
         functionMap.put("CARD_SEAL_REGIST", "封印抗性");
         functionMap.put("DARKNESS_REGIST", "黑暗抗性");
         functionMap.put("COVERING", "嘲讽");
+        functionMap.put("REFLECTION", "伤害反弹");
         functionMap.put("HEAL_FIXED", "治疗");
         functionMap.put("REGENERATE_FIXED", "延迟治疗");
         functionMap.put("ATK_UP_BY_SELF_PARAM", "自身数值加攻");
@@ -485,6 +497,8 @@ public class SkillTextGenerator {
         abbrFunctionMap.put("ATK_OP_REVENGE", "反伤");
         abbrFunctionMap.put("DEAL_BONUS", "抽卡");
         abbrFunctionMap.put("DEF_UP_FIXED", "防御提升");
+        abbrFunctionMap.put("ATTR_DEF_UP", "属抗↑");
+        abbrFunctionMap.put("ATTR_DEF_DOWN", "属抗↓");
         abbrFunctionMap.put("DEBUFF_RELEASE_ONE", "解异常");
         abbrFunctionMap.put("GUARD_BREAK_FIXED", "防御弱化");
         abbrFunctionMap.put("ATK_BREAK_FIXED", "攻击弱化");
@@ -500,6 +514,7 @@ public class SkillTextGenerator {
         abbrFunctionMap.put("CARD_SEAL_REGIST", "抗封印");
         abbrFunctionMap.put("DARKNESS_REGIST", "抗黑暗");
         abbrFunctionMap.put("COVERING", "嘲讽");
+        abbrFunctionMap.put("REFLECTION", "伤害反弹");
         abbrFunctionMap.put("HEAL_FIXED", "治疗");
         abbrFunctionMap.put("REGENERATE_FIXED", "延迟奶");
         abbrFunctionMap.put("ATK_UP_BY_SELF_PARAM", "自身数值加攻");
@@ -523,11 +538,14 @@ public class SkillTextGenerator {
         functionOrderMap.put("ATK_OP_PIERCING", i += 10);
         functionOrderMap.put("ATK_UP_FIXED", i += 10);
         functionOrderMap.put("DEF_UP_FIXED", i += 10);
+        functionOrderMap.put("ATTR_DEF_UP", i += 10);
+        functionOrderMap.put("ATTR_DEF_DOWN", i += 10);
         functionOrderMap.put("HEAL_FIXED", i += 10);
         functionOrderMap.put("GUARD_BREAK_FIXED", i += 10);
         functionOrderMap.put("ATK_BREAK_FIXED", i += 10);
         functionOrderMap.put("ATK_BREAK_BY_SELF_PARAM", i += 10);
         functionOrderMap.put("REGENERATE_FIXED", i += 10);
+        functionOrderMap.put("REFLECTION", i += 10);
         functionOrderMap.put("ATK_UP_BY_SELF_PARAM", i += 10);
         functionOrderMap.put("DEF_UP_BY_SELF_PARAM", i += 10);
         functionOrderMap.put("HEAL_BY_SELF_PARAM", i += 10);
@@ -617,7 +635,6 @@ public class SkillTextGenerator {
                 if (!skillRole[SKILL_ROLE_PARAM5].equals("1")) {
                     sb.append("，").append(skillRole[SKILL_ROLE_PARAM5]).append("次攻击");
                 }
-
                 if (!skillRole[SKILL_ROLE_PARAM7].equals("15") && !skillRole[SKILL_ROLE_PARAM7].isEmpty()) {
                     sb.append("，暴击率").append(skillRole[SKILL_ROLE_PARAM7]).append("%");
                 }
@@ -631,17 +648,7 @@ public class SkillTextGenerator {
                 break;
             case "ATK_UP_FIXED":
                 sb.append(skillRole[SKILL_ROLE_PARAM1]).append("回合/提升");
-                if (skillRole[SKILL_ROLE_PARAM2].equals("ATK")) {
-                    sb.append("物理伤害");
-                } else if (skillRole[SKILL_ROLE_PARAM2].equals("INT")) {
-                    sb.append("魔法伤害");
-                } else if (skillRole[SKILL_ROLE_PARAM2].equals("MND")) {
-                    sb.append("治疗量");
-                } else if (skillRole[SKILL_ROLE_PARAM2].equals("MAX_HP")) {
-                    sb.append("最大HP");
-                } else {
-                    System.out.println("Error:" + function);
-                }
+                sb.append(EnumAttribute.getNameById(skillRole[SKILL_ROLE_PARAM2]));
                 val = (Integer.parseInt(skillRole[SKILL_ROLE_PARAM4]) + Integer.parseInt(skillRole[SKILL_ROLE_PARAM5]) * maxLevel) / 1000;
                 sb.append(val);
                 break;
@@ -655,13 +662,19 @@ public class SkillTextGenerator {
                 sb.append(skillRole[SKILL_ROLE_PARAM1]).append("回合/提升");
                 val = (Integer.parseInt(skillRole[SKILL_ROLE_PARAM4]) + Integer.parseInt(skillRole[SKILL_ROLE_PARAM5]) * maxLevel) / 1000;
                 sb.append(val).append("点");
-                if (skillRole[SKILL_ROLE_PARAM2].equals("MDEF")) {
-                    sb.append("魔法防御");
-                } else if (skillRole[SKILL_ROLE_PARAM2].equals("DEF")) {
-                    sb.append("物理防御");
-                } else {
-                    System.out.println("Error:" + function);
-                }
+                sb.append(EnumAttribute.getNameById(skillRole[SKILL_ROLE_PARAM2]));
+                break;           
+            case "ATTR_DEF_UP":
+                sb.append(skillRole[SKILL_ROLE_PARAM1]).append("回合/提升");
+                val = Integer.parseInt(skillRole[SKILL_ROLE_PARAM4]) + Integer.parseInt(skillRole[SKILL_ROLE_PARAM5]) * maxLevel / 1000;
+                sb.append(val).append("点");
+                sb.append(EnumType.getNameById(skillRole[SKILL_ROLE_PARAM6])).append("属性抗性");
+                break;  
+            case "ATTR_DEF_DOWN":
+                sb.append(skillRole[SKILL_ROLE_PARAM1]).append("回合/降低");
+                val = Integer.parseInt(skillRole[SKILL_ROLE_PARAM4]) + Integer.parseInt(skillRole[SKILL_ROLE_PARAM5]) * maxLevel / 1000;
+                sb.append(val).append("点");
+                sb.append(EnumType.getNameById(skillRole[SKILL_ROLE_PARAM6])).append("属性抗性");
                 break;
             case "HEAL_FIXED":
                 boolean hasBase = false;
@@ -683,7 +696,10 @@ public class SkillTextGenerator {
             case "REGENERATE_FIXED":
                 sb.append(skillRole[SKILL_ROLE_PARAM1]).append("回合/每回合恢复HP");
                 val = Integer.parseInt(skillRole[SKILL_ROLE_PARAM2]) + (Integer.parseInt(skillRole[SKILL_ROLE_PARAM3]) * maxLevel) / 1000;
-                sb.append(val);
+                sb.append(val);               
+                if (!skillRole[SKILL_ROLE_PARAM4].equals("1000")) {
+                    sb.append("+").append(EnumAttribute.getNameById(skillRole[SKILL_ROLE_PARAM6])).append("的").append(Integer.parseInt(skillRole[SKILL_ROLE_PARAM4]) / 10).append("%");
+                }
                 break;
             case "DEBUFF_RELEASE_ONE":
                 sb.append("解除").append(functionMap.get(skillRole[SKILL_ROLE_PARAM3])).append("状态");
@@ -692,37 +708,17 @@ public class SkillTextGenerator {
                 sb.append(skillRole[SKILL_ROLE_PARAM1]).append("回合/降低");
                 val = Integer.parseInt(skillRole[SKILL_ROLE_PARAM3]) * (Integer.parseInt(skillRole[SKILL_ROLE_PARAM4]) + Integer.parseInt(skillRole[SKILL_ROLE_PARAM5]) * maxLevel) / 1000;
                 sb.append(val).append("点");
-                if (skillRole[SKILL_ROLE_PARAM2].equals("MDEF")) {
-                    sb.append("魔法防御");
-                } else if (skillRole[SKILL_ROLE_PARAM2].equals("DEF")) {
-                    sb.append("物理防御");
-                } else {
-                    System.out.println("Error:" + function);
-                }
+                sb.append(EnumAttribute.getNameById(skillRole[SKILL_ROLE_PARAM2]));
                 break;
             case "ATK_BREAK_FIXED":
                 sb.append(skillRole[SKILL_ROLE_PARAM1]).append("回合/降低");
                 val = Integer.parseInt(skillRole[SKILL_ROLE_PARAM3]) * (Integer.parseInt(skillRole[SKILL_ROLE_PARAM4]) + Integer.parseInt(skillRole[SKILL_ROLE_PARAM5]) * maxLevel) / 1000;
                 sb.append(val).append("点");
-                if (skillRole[SKILL_ROLE_PARAM2].equals("INT")) {
-                    sb.append("魔法伤害");
-                } else if (skillRole[SKILL_ROLE_PARAM2].equals("ATK")) {
-                    sb.append("物理伤害");
-                } else {
-                    System.out.println("Error:" + function);
-                }
+                sb.append(EnumAttribute.getNameById(skillRole[SKILL_ROLE_PARAM2]));
                 break;
             case "ATK_OP_DAMAGE_INCREASE":
                 sb.append("提升当前");
-                if (skillRole[SKILL_ROLE_PARAM5].equals("HP")) {
-                    sb.append("HP");
-                } else if (skillRole[SKILL_ROLE_PARAM5].equals("ATK")) {
-                    sb.append("物理攻击力");
-                } else if (skillRole[SKILL_ROLE_PARAM5].equals("INT")) {
-                    sb.append("魔法攻击力");
-                } else {
-                    System.out.println("Error:" + function);
-                }
+                sb.append(EnumAttribute.getNameById(skillRole[SKILL_ROLE_PARAM5]));
                 val = Long.parseLong(skillRole[SKILL_ROLE_PARAM3]) / 10;
                 sb.append(val.toString()).append("%的威力");
                 break;
@@ -732,11 +728,7 @@ public class SkillTextGenerator {
                 sb.append(val).append("+");
                 val = Long.parseLong(skillRole[SKILL_ROLE_PARAM6]) / 10;
                 sb.append(val).append("%");
-                if (skillRole[SKILL_ROLE_PARAM8].equals("ATK")) {
-                    sb.append("物理攻击力");
-                } else if (skillRole[SKILL_ROLE_PARAM8].equals("INT")) {
-                    sb.append("魔法攻击力");
-                }
+                sb.append(EnumAttribute.getNameById(skillRole[SKILL_ROLE_PARAM8]));
                 sb.append("的冰冻伤害");
                 break;
             case "BLEED":
@@ -745,11 +737,7 @@ public class SkillTextGenerator {
                 sb.append(val).append("+");
                 val = Long.parseLong(skillRole[SKILL_ROLE_PARAM6]) / 10;
                 sb.append(val).append("%");
-                if (skillRole[SKILL_ROLE_PARAM8].equals("ATK")) {
-                    sb.append("物理攻击力");
-                } else if (skillRole[SKILL_ROLE_PARAM8].equals("INT")) {
-                    sb.append("魔法攻击力");
-                }
+                sb.append(EnumAttribute.getNameById(skillRole[SKILL_ROLE_PARAM8]));
                 sb.append("的裂风伤害");
                 break;
             case "POISON":
@@ -758,11 +746,7 @@ public class SkillTextGenerator {
                 sb.append(val).append("+");
                 val = Long.parseLong(skillRole[SKILL_ROLE_PARAM6]) / 10;
                 sb.append(val).append("%");
-                if (skillRole[SKILL_ROLE_PARAM8].equals("ATK")) {
-                    sb.append("物理攻击力");
-                } else if (skillRole[SKILL_ROLE_PARAM8].equals("INT")) {
-                    sb.append("魔法攻击力");
-                }
+                sb.append(EnumAttribute.getNameById(skillRole[SKILL_ROLE_PARAM8]));
                 sb.append("的中毒伤害");
                 break;
             case "ELECTRIC":
@@ -771,11 +755,7 @@ public class SkillTextGenerator {
                 sb.append(val).append("+");
                 val = Long.parseLong(skillRole[SKILL_ROLE_PARAM6]) / 10;
                 sb.append(val).append("%");
-                if (skillRole[SKILL_ROLE_PARAM8].equals("ATK")) {
-                    sb.append("物理攻击力");
-                } else if (skillRole[SKILL_ROLE_PARAM8].equals("INT")) {
-                    sb.append("魔法攻击力");
-                }
+                sb.append(EnumAttribute.getNameById(skillRole[SKILL_ROLE_PARAM8]));
                 sb.append("的感电伤害");
                 break;
             case "BURN":
@@ -784,11 +764,7 @@ public class SkillTextGenerator {
                 sb.append(val).append("+");
                 val = Long.parseLong(skillRole[SKILL_ROLE_PARAM6]) / 10;
                 sb.append(val).append("%");
-                if (skillRole[SKILL_ROLE_PARAM8].equals("ATK")) {
-                    sb.append("物理攻击力");
-                } else if (skillRole[SKILL_ROLE_PARAM8].equals("INT")) {
-                    sb.append("魔法攻击力");
-                }
+                sb.append(EnumAttribute.getNameById(skillRole[SKILL_ROLE_PARAM8]));
                 sb.append("的燃烧伤害");
 //                System.out.println(Arrays.toString(skillRole));
 //                System.out.println(sb.toString());
@@ -827,81 +803,33 @@ public class SkillTextGenerator {
                 val = Long.parseLong(skillRole[SKILL_ROLE_PARAM2]) / 10;
                 sb.append(val).append("%伤害");
                 break;
+            case "REFLECTION":
+                sb.append(skillRole[SKILL_ROLE_PARAM1]).append("回合/反射所受");
+                sb.append(EnumPhysicsMagic.getNameById(skillRole[SKILL_ROLE_PARAM4])).append("伤害的");
+                val = (Integer.parseInt(skillRole[SKILL_ROLE_PARAM2]) + Integer.parseInt(skillRole[SKILL_ROLE_PARAM3]) * maxLevel) / 100;
+                sb.append(val).append("%");
+                break;
             case "ATK_UP_BY_SELF_PARAM":
                 sb.append(skillRole[SKILL_ROLE_PARAM1]).append("回合/");
-                if (skillRole[SKILL_ROLE_PARAM2].equals("ATK")) {
-                    sb.append("物理攻击力");
-                } else if (skillRole[SKILL_ROLE_PARAM2].equals("INT")) {
-                    sb.append("魔法攻击力");
-                } else if (skillRole[SKILL_ROLE_PARAM2].equals("MND")) {
-                    sb.append("治疗量");
-                } else if (skillRole[SKILL_ROLE_PARAM2].equals("MAX_HP")) {
-                    sb.append("最大HP");
-                } else {
-                    System.out.println("Error:" + function);
-                }
+                sb.append(EnumAttribute.getNameById(skillRole[SKILL_ROLE_PARAM2]));
                 sb.append("提升").append(Long.parseLong(skillRole[SKILL_ROLE_PARAM6]) * maxLevel).append("+");
-                if (skillRole[SKILL_ROLE_PARAM3].equals("ATK")) {
-                    sb.append("物理攻击力");
-                } else if (skillRole[SKILL_ROLE_PARAM3].equals("INT")) {
-                    sb.append("魔法攻击力");
-                } else if (skillRole[SKILL_ROLE_PARAM3].equals("MND")) {
-                    sb.append("治疗量");
-                } else {
-                    System.out.println("Error:" + function);
-                }
+                sb.append(EnumAttribute.getNameById(skillRole[SKILL_ROLE_PARAM3]));
                 sb.append("的");
                 sb.append(new BigDecimal(skillRole[SKILL_ROLE_PARAM4]).divide(BigDecimal.TEN)).append("%");
                 break;
             case "ATK_BREAK_BY_SELF_PARAM":
                 sb.append(skillRole[SKILL_ROLE_PARAM1]).append("回合/");
-                if (skillRole[SKILL_ROLE_PARAM2].equals("ATK")) {
-                    sb.append("物理攻击力");
-                } else if (skillRole[SKILL_ROLE_PARAM2].equals("INT")) {
-                    sb.append("魔法攻击力");
-                } else if (skillRole[SKILL_ROLE_PARAM2].equals("MND")) {
-                    sb.append("治疗量");
-                } else if (skillRole[SKILL_ROLE_PARAM2].equals("MAX_HP")) {
-                    sb.append("最大HP");
-                } else {
-                    System.out.println("Error:" + function);
-                }
+                sb.append(EnumAttribute.getNameById(skillRole[SKILL_ROLE_PARAM2]));
                 sb.append("下降").append(Long.parseLong(skillRole[SKILL_ROLE_PARAM6]) * maxLevel).append("+");
-                if (skillRole[SKILL_ROLE_PARAM3].equals("ATK")) {
-                    sb.append("物理攻击力");
-                } else if (skillRole[SKILL_ROLE_PARAM3].equals("INT")) {
-                    sb.append("魔法攻击力");
-                } else if (skillRole[SKILL_ROLE_PARAM3].equals("MND")) {
-                    sb.append("治疗量");
-                } else {
-                    System.out.println("Error:" + function);
-                }
+                sb.append(EnumAttribute.getNameById(skillRole[SKILL_ROLE_PARAM3]));
                 sb.append("的");
                 sb.append(new BigDecimal(skillRole[SKILL_ROLE_PARAM4]).divide(BigDecimal.TEN)).append("%");
                 break;
             case "DEF_UP_BY_SELF_PARAM":
                 sb.append(skillRole[SKILL_ROLE_PARAM1]).append("回合/");
-                if (skillRole[SKILL_ROLE_PARAM2].equals("MDEF")) {
-                    sb.append("魔法防御");
-                } else if (skillRole[SKILL_ROLE_PARAM2].equals("DEF")) {
-                    sb.append("物理防御");
-                } else {
-                    System.out.println("Error:" + function + " | " + skillRole[SKILL_ROLE_PARAM2]);
-                }
+                sb.append(EnumAttribute.getNameById(skillRole[SKILL_ROLE_PARAM2]));
                 sb.append("提升").append(Long.parseLong(skillRole[SKILL_ROLE_PARAM6]) * maxLevel).append("+");
-                if (skillRole[SKILL_ROLE_PARAM3].equals("ATK")) {
-                    sb.append("物理攻击力");
-                } else if (skillRole[SKILL_ROLE_PARAM3].equals("INT")) {
-                    sb.append("魔法攻击力");
-                } else if (skillRole[SKILL_ROLE_PARAM3].equals("MND")) {
-                    sb.append("治疗量");
-                } else if (skillRole[SKILL_ROLE_PARAM3].equals("MDEF")) {
-                    sb.append("魔法防御");
-                } else if (skillRole[SKILL_ROLE_PARAM3].equals("DEF")) {
-                    sb.append("物理防御");
-                } else {
-                    System.out.println("Error:" + function + " | " + skillRole[SKILL_ROLE_PARAM2]);
-                }
+                sb.append(EnumAttribute.getNameById(skillRole[SKILL_ROLE_PARAM3]));
                 sb.append("的");
                 sb.append(new BigDecimal(skillRole[SKILL_ROLE_PARAM4]).divide(BigDecimal.TEN)).append("%");
 //                val = Long.parseLong(skillRole[21]) / 10;
@@ -932,7 +860,7 @@ public class SkillTextGenerator {
                 break;
             case "DOT_VALUE_UP":
                 sb.append(functionMap.get(skillRole[SKILL_ROLE_PARAM6])).append("的效果回合+").append(skillRole[SKILL_ROLE_PARAM1]).
-                        append("，伤害+").append(skillRole[SKILL_ROLE_PARAM1]).append("%");
+                        append("，伤害+").append(skillRole[SKILL_ROLE_PARAM2]).append("%");
                 break;
             default:
                 System.out.println("Unrecognized function: " + function);
@@ -941,8 +869,24 @@ public class SkillTextGenerator {
         return sb.toString();
     }
 
-    private static String getSkillBoostCondition(String[] skillArray) {
-        String condition = skillArray[20];
+    private static String getSkillBoostCondition(String[] skillArray, Boolean isTrigger) {
+        Integer cond, param1, param2, param3, trigger, last;
+        if (isTrigger) {
+            trigger = SKILL_TRIGGER_TIME;
+            last = SKILL_TRIGGER_LAST;
+            cond = SKILL_TRIGGER_CONDITION;
+            param1 = SKILL_TRIGGER_PARAM1;
+            param2 = SKILL_TRIGGER_PARAM2;
+            param3 = SKILL_TRIGGER_PARAM3;
+        } else {
+            trigger = -1;
+            last = -1;
+            cond = SKILL_BOOST_CONDITION;
+            param1 = SKILL_BOOST_PARAM1;
+            param2 = SKILL_BOOST_PARAM2;
+            param3 = SKILL_BOOST_PARAM3;
+        }
+        String condition = skillArray[cond];
         if (condition.isEmpty()) {
             return null;
         }
@@ -950,56 +894,79 @@ public class SkillTextGenerator {
         sb.append("【");
         switch (condition) {
             case "SELF_OTHER_PLAY_SKILL_KIND":
-                sb.append("自身/").append(categoryMap.get(skillArray[21])).append("/").append(skillArray[22]).append("枚以上");
+                sb.append("自身/").append(categoryMap.get(skillArray[param1])).append("/额外").append(skillArray[param2]).append("枚以上");
                 break;
             case "TURN":
-                if (skillArray[21].equals("0")) {
-                    sb.append(skillArray[22]).append("回合前");
+                if (skillArray[param1].equals("0")) {
+                    sb.append(skillArray[param2]).append("回合前");
                 } else {
-                    sb.append(skillArray[21]).append("回合后");
+                    sb.append(skillArray[param1]).append("回合后");
                 }
                 break;
             case "SELF_HP_PER":
                 sb.append("自身HP");
-                if (skillArray[21].equals("0")) {
-                    sb.append(skillArray[22]).append("%以下");
+                if (skillArray[param1].equals("0")) {
+                    sb.append(skillArray[param2]).append("%以下");
                 } else {
-                    sb.append(skillArray[21]).append("%");
-                    if (!skillArray[21].equals("100")) {
+                    sb.append(skillArray[param1]).append("%");
+                    if (!skillArray[param1].equals("100")) {
                         sb.append("以上");
                     }
                 }
                 break;
             case "DECK_COMBO_COUNT":
-                sb.append(skillArray[21]).append("Chain以上");
+                sb.append(skillArray[param1]).append("Chain以上");
                 break;
             case "TARGET_DEBUFF":
-                sb.append("目标").append(functionMap.get(skillArray[21]));
+                sb.append("目标").append(functionMap.get(skillArray[param1]));
                 break;
             case "TARGET_ATTR":
-                sb.append("目标为").append(typeMap.get(skillArray[21])).append("属性");
+                sb.append("目标为").append(typeMap.get(skillArray[param1])).append("属性");
                 break;
             case "SELF_OTHER_PLAY_ATTR":
-                sb.append("自身/").append(typeMap.get(skillArray[21])).append("/").append(skillArray[22]).append("枚以上");
+                sb.append("自身/").append(typeMap.get(skillArray[param1])).append("/额外").append(skillArray[param2]).append("枚以上");
                 break;
             case "SELF_OTHER_PLAY_RARITY":
-                sb.append("自身/").append(skillArray[22]).append("枚以上");
+                sb.append("自身/额外").append(skillArray[param2]).append("枚以上");
                 break;
             case "SELF_BUFF":
-                sb.append("自身为").append(functionMap.get(skillArray[21])).append("状态");
+                sb.append("自身为").append(functionMap.get(skillArray[param1]));
+                if (skillArray.length > param2 && !skillArray[param2].isEmpty()) {
+                    sb.append("·").append(functionMap.get(skillArray[param2]));
+                }
+                sb.append("状态");
                 break;
             case "ENEMY_SIDE_DEBUFF":
-                sb.append("敌方为").append(functionMap.get(skillArray[21])).append("状态");
+                sb.append("敌方为").append(functionMap.get(skillArray[param1]));
+                if (skillArray.length > param2 && !skillArray[param2].isEmpty()) {
+                    sb.append("·").append(functionMap.get(skillArray[param2]));
+                }
+                sb.append("状态");
                 break;
             case "TARGET_BUFF":
-                sb.append("目标为").append(functionMap.get(skillArray[21])).append("状态");
+                sb.append("目标为").append(functionMap.get(skillArray[param1]));
+                if (skillArray.length > param2 && !skillArray[param2].isEmpty()) {
+                    sb.append("·").append(functionMap.get(skillArray[param2]));
+                }
+                sb.append("状态");
                 break;
             case "USER_SIDE_DEBUFF":
-                sb.append("我方为").append(functionMap.get(skillArray[21])).append("状态");
+                sb.append("我方为").append(functionMap.get(skillArray[param1]));
+                if (skillArray.length > param2 && !skillArray[param2].isEmpty()) {
+                    sb.append("·").append(functionMap.get(skillArray[param2]));
+                }
+                sb.append("状态");
                 break;
             default:
                 System.out.println("Unrecognized condition: " + condition);
                 break;
+        }
+        if (isTrigger) {
+            switch (skillArray[trigger]) {
+                case "ENEMY_ACTION_END":
+                    sb.append("/敌方行动后发动/保持").append(skillArray[last]).append("回合");
+                    break;
+            }
         }
         sb.append("】");
         return sb.toString();
@@ -1026,7 +993,7 @@ public class SkillTextGenerator {
         Cell cell;
         List<String> csv = new ArrayList<>();
         StringBuilder sb;
-        for (int i = 0; i < sheet.getLastRowNum(); i++) {
+        for (int i = 0; i <= sheet.getLastRowNum(); i++) {
             sb = new StringBuilder();
             row = sheet.getRow(i);
             if (row == null) {
@@ -1088,7 +1055,8 @@ public class SkillTextGenerator {
                 }
 
                 skill = skillMap.get(array[0]).get(0);
-                skillRoles = skillRoleMap.get(array[0]);
+                //System.out.println(array[0]);
+                skillRoles = skillRoleMap.get(skill[SKILL_SKILLROLE_COL]);
                 sb.append(skill[13]).append(",");   // Cost
                 sb.append(targetMap.get(skill[18])).append("/");
                 for (String[] skillRole : skillRoles) {

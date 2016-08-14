@@ -33,6 +33,8 @@ public class BuffInfo implements Cloneable {
      * @CARD_SEAL - 0-5: card position.
      * @ENCHANT - 0: damage value, 1: type index.
      * @DOT_VALUE_UP - 0：damage increase rate (%), 1: dot type index.
+     * @ATTR_DEF_CHANGE - 0: value, 1: type index (Fire, ice...).
+     * @REFLECTION - 0: value(*10000), 1: p/m index (PHYSICS, MAGIC, ALL).
      */
     private Integer turnLeft;
     private final Integer turnSet;
@@ -40,7 +42,6 @@ public class BuffInfo implements Cloneable {
     private final Integer[] value;
     private final String buffName;        // Used in boost condition check or ai_order check.
     private final boolean isBuff;         //Buff or debuff.
-
 
     public BuffInfo(Integer turnLeft, Integer turnSet, String type, Integer[] value, String buffName, boolean isBuff) {
         this.turnLeft = turnLeft;
@@ -54,11 +55,11 @@ public class BuffInfo implements Cloneable {
     public Integer getTurnLeft() {
         return turnLeft;
     }
-    
+
     public void extendTurn(Integer turns) {
         turnLeft += turns;
     }
-    
+
     public Integer getTurnSet() {
         return turnSet;
     }
@@ -81,7 +82,10 @@ public class BuffInfo implements Cloneable {
 
     @Override
     protected BuffInfo clone() throws CloneNotSupportedException {
-        return (BuffInfo) super.clone(); 
+//        BuffInfo clone = (BuffInfo) super.clone(); 
+//        clone.setValue(Arrays.copyOf(value, value.length));
+//        return clone;
+        return (BuffInfo) super.clone();
     }
 
     @Override

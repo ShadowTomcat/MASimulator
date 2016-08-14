@@ -98,14 +98,19 @@ public class FileUtils {
 
     }
 
-    public static HashMap<String, List<String[]>> loadListMap(String filePath) {
+    public static HashMap<String, List<String[]>> loadListMap(String filePath, HashMap<String, List<String[]>> oldMap) {
         try {
 //            File f = new File(filePath);
 //            BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream(f), "UTF-8"));
             InputStream is = FileUtils.class.getResourceAsStream("/resources/" + filePath);
             BufferedReader br = new BufferedReader(new InputStreamReader(is, "UTF-8"));
             String line;
-            HashMap<String, List<String[]>> map = new HashMap<>();
+            HashMap<String, List<String[]>> map;
+            if(oldMap == null){
+                map = new HashMap<>();
+            } else {
+                map = oldMap;
+            }
             //Pattern p = Pattern.compile("[\\d]+");
             while ((line = br.readLine()) != null) {
                 String[] lineArray = line.split(",");

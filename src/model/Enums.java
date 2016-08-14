@@ -103,7 +103,7 @@ public class Enums {
 
     public enum EnumPhysicsMagic {
 
-        PM0("PHYSICS", "物理", 0, "DEF"), PM1("MAGIC", "魔法", 1, "MDEF"), PM2("ENCHANT", "追伤", 2, "NULL"), PM3("ALL", "任意", 3, "NULL");
+        PM0("PHYSICS", "物理", 0, "DEF"), PM1("MAGIC", "魔法", 1, "MDEF"), PM2("ENCHANT", "追伤", 2, "NULL"), PM3("ALL", "全", 3, "NULL");
         private final String id;
         private final String name;
         private final Integer index;
@@ -114,6 +114,10 @@ public class Enums {
             this.name = name;
             this.index = index;
             this.defId = defId;
+        }
+
+        public Integer getIndex() {
+            return index;
         }
 
         public static Integer getIndexById(String id) {
@@ -168,7 +172,8 @@ public class Enums {
         B30("ATK_UP_BY_MND", "治疗量提升", "治疗↑", 30, true), B31("ATK_BREAK_BY_MND", "治疗量下降", "治疗↓", 30, true), B32("CRITICAL_UP", "暴击率提升", "暴击↑", 32, true),
         B33("BURN_RESIST", "燃烧抗性", "燃抗", 33, true), B34("FREEZE_RESIST", "冰冻抗性", "冻抗", 34, true), B35("BLEED_RESIST", "裂风抗性", "裂抗", 35, true),
         B36("ELECTRIC_RESIST", "感电抗性", "电抗", 36, true), B37("POISON_RESIST", "中毒抗性", "毒抗", 37, true), B38("COST_BLOCK", "COST锁定", "COST↓", 38, false),
-        B39("ENCHANT", "追加伤害", "追伤", 39, true), B40("ATK_UP_BY_MAX_HP", "最大HP上升", "HP↑", 39, true), B41("DOT_VALUE_UP", "DOT增强", "DOT↑", 40, true);
+        B39("ENCHANT", "追加伤害", "追伤", 39, true), B40("ATK_UP_BY_MAX_HP", "最大HP上升", "HP↑", 40, true), B41("DOT_VALUE_UP", "DOT增强", "DOT↑", 41, true),
+        B42("ATTR_DEF_UP", "属性抗性提升", "属抗↑", 42, true), B43("ATTR_DEF_DOWN", "属性抗性降低", "属抗↓", 43, false), B44("REFLECTION", "反弹伤害", "反伤", 44, true);
         private final String id;
         private final String name;
         private final String nameS;
@@ -333,6 +338,58 @@ public class Enums {
                 idToIndex.put(eA.getId(), eA.getIndex());
                 idToName.put(eA.getId(), eA.getName());
                 indexToName.put(eA.getIndex(), eA.getName());
+            }
+        }
+
+        public String getId() {
+            return id;
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        public int getIndex() {
+            return index;
+        }
+
+        public static Integer getIndexById(String id) {
+            return idToIndex.get(id);
+        }
+
+        public static String getNameById(String id) {
+            return idToName.get(id);
+        }
+
+        public static String getNameByIndex(Integer index) {
+            return indexToName.get(index);
+        }
+    }
+
+    public enum EnumSkillType {
+
+        ATTACK("ATTACK", "物理", 0), DEFENSE("DEFENSE", "防御", 1), JAMMING("JAMMING", "弱化", 2), RECOVERY("RECOVERY", "治疗", 3),
+        SORCERY("SORCERY", "魔法", 4), SUPPORT("SUPPORT", "支援", 5), SPECIAL("SPECIAL", "特殊", 6), NULL("NULL", "无", 7);
+
+        private final String id;
+        private final String name;
+        private final int index;
+        private final static HashMap<String, Integer> idToIndex = new HashMap<>();
+        private final static HashMap<String, String> idToName = new HashMap<>();
+        private final static HashMap<Integer, String> indexToName = new HashMap<>();
+
+        private EnumSkillType(String id, String name, int index) {
+            this.id = id;
+            this.name = name;
+            this.index = index;
+
+        }
+
+        static {
+            for (EnumSkillType eST : EnumSet.allOf(EnumSkillType.class)) {
+                idToIndex.put(eST.getId(), eST.getIndex());
+                idToName.put(eST.getId(), eST.getName());
+                indexToName.put(eST.getIndex(), eST.getName());
             }
         }
 

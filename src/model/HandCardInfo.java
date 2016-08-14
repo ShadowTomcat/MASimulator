@@ -28,6 +28,7 @@ public class HandCardInfo implements Cloneable {
     private Integer isTrapped = 0;              // 0 = mot trapped, 1+ = trap damage.
     private boolean isFirstRoundCard;       // Used in card manual selection.
     private Integer dealedTurn;             // Used in card manual selection.
+    private Integer delayedTurn;             // Whether a card is set, and for how long.
     
     public HandCardInfo() {
     }
@@ -155,6 +156,14 @@ public class HandCardInfo implements Cloneable {
 
     public void setIsTrapped(Integer isTrapped) {
         this.isTrapped = isTrapped;
+    }
+
+    public Integer getDelayedTurn() {
+        return delayedTurn;
+    }
+
+    public void setDelayedTurn(Integer delayedTurn) {
+        this.delayedTurn = delayedTurn;
     }
 
     public boolean isFirstRoundCard() {

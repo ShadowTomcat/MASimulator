@@ -37,6 +37,7 @@ import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.ListCellRenderer;
 import javax.swing.table.DefaultTableModel;
+import model.Constants;
 import model.Enums.EnumArthur;
 import preprocessing.EnemyInfoGenerator;
 import swing.InformationDialog;
@@ -507,8 +508,10 @@ public class BattlePrepare extends javax.swing.JPanel {
         enemyPartyMap = FileUtils.loadMap("enemy_party.csv");
         enemyLvUpMap = FileUtils.loadMap("enemy_lvup.csv");
         sphereMap = FileUtils.loadMap("sphere_data.csv");
-        skillMap = FileUtils.loadListMap("skill.csv");
-        skillRoleMap = FileUtils.loadListMap("skill_role.csv");
+        skillMap = FileUtils.loadListMap("skill_player.csv", null);
+        skillMap = FileUtils.loadListMap("skill_enemy.csv", skillMap);
+        skillRoleMap = FileUtils.loadListMap("skill_role_player.csv", null);
+        skillRoleMap = FileUtils.loadListMap("skill_role_enemy.csv", skillRoleMap);
         enemyAiOrderMap = FileUtils.loadMap("enemy_ai_order.csv");
 
         classifiedEnemyMap = new HashMap<>();
@@ -841,7 +844,6 @@ public class BattlePrepare extends javax.swing.JPanel {
                 skill.setTurnAllowedAfter(Integer.parseInt(array[11]));
                 skill.setRarity("SPHERE");
                 skill.setArthurIndex(i);
-
 //                skill.setSkill(skillMap.get(skill.getSkillId()));
 //                skill.setSkillRole(new HashMap<>());
 //                for (String[] arr : skill.getSkill()) {
@@ -882,7 +884,8 @@ public class BattlePrepare extends javax.swing.JPanel {
                     skill.setDescription(array[16]);
                     skill.setDialogue("");
                 }
-                skill.setDescription("<html>" + skill.getDescription().replace("【", "<br>【") + "</html>");
+                skill.setDescription("<html>" + skill.getDescription().substring(0, 1) 
+                        + skill.getDescription().substring(1).replaceAll("【", "<br>【") + "</html>");
 //                skill.setSkill(skillMap.get(skill.getSkillId()));
 //                skill.setSkillRole(new HashMap<>());
 //                for (String[] arr : skill.getSkill()) {

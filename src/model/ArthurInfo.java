@@ -10,6 +10,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
+import org.apache.log4j.Logger;
 
 /**
  *
@@ -17,6 +18,7 @@ import java.util.List;
  */
 public class ArthurInfo extends PartInfo implements Cloneable {
 
+    private static final Logger log = Logger.getLogger(ArthurInfo.class.getName());
     private String id; // Mercenary, Millionare, Thief, Singer
     private String name; // 佣兵亚瑟，富豪亚瑟，盗贼亚瑟，歌姬亚瑟
     private Integer partIndex;
@@ -32,8 +34,10 @@ public class ArthurInfo extends PartInfo implements Cloneable {
     private Integer damageTakenNowTurn = 0;
     private Integer pDamageTakenNowTurn = 0;    // Physical
     private Integer mDamageTakenNowTurn = 0;    // Magic
+    private Integer[] typeDef = new Integer[]{0, 0, 0, 0, 0};    // Attribute(type) defence (FIRE, ICE, WIND, LIGHT， DARK)
     private final Integer[] eDamageTakenNowTurn = new Integer[]{0, 0, 0, 0, 0};    // Enchant Damage
     private final Integer[] damageNumNowTurn = new Integer[]{0, 0, 0};        // Physics, Magic, Enchant
+    private final Integer[] skillTypeTakenNowTurn = new Integer[]{0, 0, 0, 0, 0, 0, 0, 0};        // ATTACK, DEFENSE, JAMMING, RECOVERY, SORCERY, SUPPORT, SPECIAL, NULL 
     private Integer healTakenNowTurn = 0;
     private final Integer parent = -1;
 
@@ -51,6 +55,7 @@ public class ArthurInfo extends PartInfo implements Cloneable {
     private HandCardInfo[] handCards = new HandCardInfo[5];     // Size 5, can be null.
     private HandCardInfo[] handSpheres = new HandCardInfo[5];   // Size 5 (but max = 3), can be null.
     private List<String> deckCards = new LinkedList<>();        // Current cards still in deck.
+    private List<SetCard> setCards = new LinkedList<>();        // Current set cards (action delayed).
     private Boolean[] darknessPos = new Boolean[]{false, false, false, false, false};   // True = darkness, false = not.
 
     private List<HandCardInfo> currentPlayedItem = new LinkedList<>();
@@ -167,12 +172,30 @@ public class ArthurInfo extends PartInfo implements Cloneable {
         this.realAttr = realAttr;
     }
 
+    @Override
+    public Integer[] getTypeDef() {
+        return typeDef;
+    }
+
+    @Override
+    public void setTypeDef(Integer[] typeDef) {
+        this.typeDef = typeDef;
+    }
+
     public void setFirstRoundDeck(List<String> firstRoundDeck) {
         this.firstRoundDeck = firstRoundDeck;
     }
 
     public void setDeckCards(List<String> deckCards) {
         this.deckCards = deckCards;
+    }
+
+    public List<SetCard> getSetCards() {
+        return setCards;
+    }
+
+    public void setSetCards(List<SetCard> setCards) {
+        this.setCards = setCards;
     }
 
     @Override
@@ -324,9 +347,9 @@ public class ArthurInfo extends PartInfo implements Cloneable {
                 damageNumSum += damageNum;
             }
             return damageNumSum;
-        } else if (damageType >= 0 && damageType <= 1){ // Physics or magic includes enchant
+        } else if (damageType >= 0 && damageType <= 1) { // Physics or magic includes enchant
             return damageNumNowTurn[damageType] + damageNumNowTurn[2];
-        }else {
+        } else {
             return damageNumNowTurn[damageType];
         }
     }
@@ -339,6 +362,34 @@ public class ArthurInfo extends PartInfo implements Cloneable {
             }
         } else {
             this.damageNumNowTurn[damageType] = damageNumNowTurn;
+        }
+    }
+
+    @Override
+    public void addDamageNumNowTurn(Integer damageTimes, Integer damageType) {
+        if (damageType == null) {
+            return;
+        }
+        this.damageNumNowTurn[damageType] += damageTimes;
+    }
+
+    @Override
+    public Integer getSkillTypeTakenNowTurn(Integer skillTypeIndex) {
+        if (skillTypeIndex == null) {
+            return null;
+        } else {
+            return skillTypeTakenNowTurn[skillTypeIndex];
+        }
+    }
+
+    @Override
+    public void setSkillTypeTakenNowTurn(Integer skillTypeIndex) {
+        if (skillTypeIndex == null) {
+            for (int i = 0; i < skillTypeTakenNowTurn.length; i++) {
+                skillTypeTakenNowTurn[i] = 0;
+            }
+        } else {
+            skillTypeTakenNowTurn[skillTypeIndex] = 1;
         }
     }
 
@@ -438,6 +489,28 @@ public class ArthurInfo extends PartInfo implements Cloneable {
         deckCards.add(skillId);
     }
 
+    // Set a card with given index (0-4), put it into set card list.
+    // After set cards get trigger or expire, they will be put back to the deck. 
+    public void setCard(int index) {
+        if (handCards[index] == null) {
+            System.out.println("ArthurInfo: Error 483.");
+            return;
+        }
+        String skillId = handCards[index].getSkillId();
+        setCards.add(new SetCard(skillId, handCards[index].getDelayedTurn(), handCards[index]));
+        handCards[index] = null;
+    }
+
+    // Play a set card, or expire it, and put it back to the deck
+    public void triggerSetCard(String skillId) {
+        for (int i = setCards.size() - 1; i >= 0; i--) {
+            if (setCards.get(i).getSkillId().equals(skillId)) {
+                deckCards.add(skillId);
+                setCards.remove(i);
+            }
+        }
+    }
+
     public void playSphere(Integer index) {
         if (handSpheres[index] == null) {
             System.out.println("ArthurInfo: Error 257.");
@@ -459,6 +532,7 @@ public class ArthurInfo extends PartInfo implements Cloneable {
         ArthurInfo clone = (ArthurInfo) super.clone();
         clone.setCurrentAttr(Arrays.copyOf(currentAttr, currentAttr.length));
         clone.setRealAttr(Arrays.copyOf(realAttr, realAttr.length));
+        clone.setTypeDef(Arrays.copyOf(typeDef, typeDef.length));
         HashMap<String, List<BuffInfo>> cloneBuff = new HashMap<>();
         for (String key : buffs.keySet()) {
             cloneBuff.put(key, new ArrayList<>());
@@ -468,7 +542,7 @@ public class ArthurInfo extends PartInfo implements Cloneable {
                 }
             }
         }
-        clone.setBuffs(buffs);
+        clone.setBuffs(cloneBuff);
         clone.setFirstRoundDeck(new ArrayList<>(firstRoundDeck));
         HandCardInfo[] cloneHand = new HandCardInfo[5];
         for (int i = 0; i < 5; i++) {
@@ -485,6 +559,11 @@ public class ArthurInfo extends PartInfo implements Cloneable {
         }
         clone.setHandSpheres(cloneHand);
         clone.setDeckCards(new ArrayList<>(deckCards));
+        List<SetCard> cloneSetCardList = new ArrayList<>();
+        for (SetCard setCard : setCards) {
+            cloneSetCardList.add(setCard.clone());
+        }
+        clone.setSetCards(cloneSetCardList);
         clone.setDarknessPos(Arrays.copyOf(darknessPos, darknessPos.length));
         List<HandCardInfo> clonedPlayedItem = new LinkedList<>();
         for (HandCardInfo card : currentPlayedItem) {

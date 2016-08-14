@@ -22,6 +22,7 @@ public class EnemyInfo extends PartInfo implements Cloneable {
         clone.setCurrentAttr(Arrays.copyOf(currentAttr, currentAttr.length));
         clone.setRealAttr(Arrays.copyOf(realAttr, realAttr.length));
         clone.setTypeRate(Arrays.copyOf(typeRate, typeRate.length));
+        clone.setTypeDef(Arrays.copyOf(typeDef, typeDef.length));
         HashMap<String, List<BuffInfo>> cloneBuff = new HashMap<>();
         for (String key : buffs.keySet()) {
             cloneBuff.put(key, new ArrayList<>());
@@ -31,7 +32,7 @@ public class EnemyInfo extends PartInfo implements Cloneable {
                 }
             }
         }
-        clone.setBuffs(buffs);
+        clone.setBuffs(cloneBuff);
         List<EnemySkill> clonedSkills = new ArrayList<>();
         for (EnemySkill skill : skills) {
             clonedSkills.add(skill.clone());
@@ -68,8 +69,10 @@ public class EnemyInfo extends PartInfo implements Cloneable {
     private Integer damageTakenNowTurn = 0;
     private Integer pDamageTakenNowTurn = 0;    // Physical
     private Integer mDamageTakenNowTurn = 0;    // Magic
+    private Integer[] typeDef = new Integer[]{0, 0, 0, 0, 0};    // Attribute(type) defence (FIRE, ICE, WIND, LIGHT， DARK)
     private final Integer[] eDamageTakenNowTurn = new Integer[]{0, 0, 0, 0, 0};    // Enchant Damage 
     private final Integer[] damageNumNowTurn = new Integer[]{0, 0, 0};        // Physics, Magic, Enchant
+    private final Integer[] skillTypeTakenNowTurn = new Integer[]{0, 0, 0, 0, 0, 0, 0, 0};        // ATTACK, DEFENSE, JAMMING, RECOVERY, SORCERY, SUPPORT, SPECIAL, NULL 
     private Integer healTakenNowTurn = 0;
     private Boolean[] darknessPos = new Boolean[]{false, false, false, false, false};   // True = darkness, false = not.
 
@@ -152,6 +155,14 @@ public class EnemyInfo extends PartInfo implements Cloneable {
 
     public void setRealAttr(Integer[] realAttr) {
         this.realAttr = realAttr;
+    }
+
+    public Integer[] getTypeDef() {
+        return typeDef;
+    }
+
+    public void setTypeDef(Integer[] typeDef) {
+        this.typeDef = typeDef;
     }
 
     @Override
@@ -318,9 +329,9 @@ public class EnemyInfo extends PartInfo implements Cloneable {
                 damageNumSum += damageNum;
             }
             return damageNumSum;
-        } else if (damageType >= 0 && damageType <= 1){ // Physics or magic includes enchant
+        } else if (damageType >= 0 && damageType <= 1) { // Physics or magic includes enchant
             return damageNumNowTurn[damageType] + damageNumNowTurn[2];
-        }else {
+        } else {
             return damageNumNowTurn[damageType];
         }
     }
@@ -333,6 +344,34 @@ public class EnemyInfo extends PartInfo implements Cloneable {
             }
         } else {
             this.damageNumNowTurn[damageType] = damageNumNowTurn;
+        }
+    }
+
+    @Override
+    public void addDamageNumNowTurn(Integer damageTimes, Integer damageType) {
+        if (damageType == null) {
+            return;
+        }
+        this.damageNumNowTurn[damageType] += damageTimes;
+    }
+
+    @Override
+    public Integer getSkillTypeTakenNowTurn(Integer skillTypeIndex) {
+        if (skillTypeIndex == null) {
+            return null;
+        } else {
+            return skillTypeTakenNowTurn[skillTypeIndex];
+        }
+    }
+
+    @Override
+    public void setSkillTypeTakenNowTurn(Integer skillTypeIndex) {
+        if (skillTypeIndex == null) {
+            for (int i = 0; i < skillTypeTakenNowTurn.length; i++) {
+                skillTypeTakenNowTurn[i] = 0;
+            }
+        } else {
+            skillTypeTakenNowTurn[skillTypeIndex] = 1;
         }
     }
 

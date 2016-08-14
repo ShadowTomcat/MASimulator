@@ -24,6 +24,10 @@ public abstract class PartInfo {
 
     public abstract void changeCurrentAttr(Integer valueChanged, Integer index);
 
+    public abstract Integer[] getTypeDef();
+
+    public abstract void setTypeDef(Integer[] typeDef);
+
     public abstract String getName();
 
     public abstract void setName(String name);
@@ -55,6 +59,12 @@ public abstract class PartInfo {
     public abstract Integer getDamageNumNowTurn(Integer damageType);
 
     public abstract void setDamageNumNowTurn(Integer damageNum, Integer damageType);
+
+    public abstract void addDamageNumNowTurn(Integer damageTimes, Integer damageType);
+
+    public abstract Integer getSkillTypeTakenNowTurn(Integer skillTypeIndex);
+
+    public abstract void setSkillTypeTakenNowTurn(Integer skillTypeIndex);
 
     public abstract HashMap<String, List<BuffInfo>> getBuffs();
 

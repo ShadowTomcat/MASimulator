@@ -53,6 +53,14 @@
                 <Property name="text" type="java.lang.String" value="&#x4e0a;&#x5e1d;&#x4e4b;&#x624b;"/>
               </Properties>
             </MenuItem>
+            <MenuItem class="javax.swing.JMenuItem" name="mnuExpendCost">
+              <Properties>
+                <Property name="text" type="java.lang.String" value="&#x738b;&#x4e4b;&#x8d22;&#x5b9d;"/>
+              </Properties>
+              <Events>
+                <EventHandler event="actionPerformed" listener="java.awt.event.ActionListener" parameters="java.awt.event.ActionEvent" handler="mnuExpendCostActionPerformed"/>
+              </Events>
+            </MenuItem>
           </SubComponents>
         </Menu>
         <Menu class="javax.swing.JMenu" name="jMenu1">
