@@ -5,17 +5,21 @@
  */
 package simulator;
 
+import java.awt.Color;
 import java.awt.Component;
+import java.awt.Font;
 import swing.ManualListCellRenderer;
 import java.awt.datatransfer.Clipboard;
 import java.awt.datatransfer.StringSelection;
 import java.awt.datatransfer.Transferable;
 import java.awt.event.ActionListener;
+import java.awt.image.BufferedImage;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
@@ -33,13 +37,20 @@ import javax.swing.JLabel;
 import javax.swing.JList;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
+import javax.swing.JTable;
 import javax.swing.ListCellRenderer;
 import javax.swing.ListSelectionModel;
 import javax.swing.RowSorter;
+import javax.swing.SwingConstants;
 import javax.swing.event.DocumentEvent;
+import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
+import javax.swing.table.TableCellRenderer;
 import javax.swing.table.TableRowSorter;
 import javax.swing.text.Document;
+import org.apache.log4j.Logger;
+import sun.swing.table.DefaultTableCellHeaderRenderer;
+import swing.ImageLabel;
 import util.FileUtils;
 
 /**
@@ -189,14 +200,14 @@ public class DeckSimu extends javax.swing.JPanel {
 
             },
             new String [] {
-                "ID", "名称", "稀有度", "职业", "属性", "Cost", "HP", "物攻", "魔攻", "恢复量", "技能描述"
+                "ID", "头像", "名称", "稀有度", "职业", "属性", "Cost", "HP", "物攻", "魔攻", "恢复量", "技能描述"
             }
         ) {
             Class[] types = new Class [] {
-                java.lang.String.class, java.lang.String.class, java.lang.String.class, java.lang.String.class, java.lang.String.class, java.lang.Integer.class, java.lang.Integer.class, java.lang.Integer.class, java.lang.Integer.class, java.lang.Integer.class, java.lang.String.class
+                java.lang.String.class, java.lang.String.class, java.lang.String.class, java.lang.String.class, java.lang.String.class, java.lang.String.class, java.lang.Integer.class, java.lang.Integer.class, java.lang.Integer.class, java.lang.Integer.class, java.lang.Integer.class, java.lang.String.class
             };
             boolean[] canEdit = new boolean [] {
-                false, false, false, false, false, false, false, false, false, false, false
+                false, false, false, false, false, false, false, false, false, false, false, false
             };
 
             public Class getColumnClass(int columnIndex) {
@@ -505,6 +516,8 @@ public class DeckSimu extends javax.swing.JPanel {
     private ArrayList<String> currentDeck;
     private Map<String, String[]> dataMap;
     private HashSet<Integer> keywordCols;
+    private static final Logger LOG = Logger.getLogger(DeckSimu.class.getName());
+    public final Font defaultFont = new java.awt.Font("宋体", 0, 12);
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JButton btnLoadDeck;
     private javax.swing.JButton btnSaveDeck;
@@ -881,10 +894,10 @@ public class DeckSimu extends javax.swing.JPanel {
         searchCondition.get(j).add(new JCheckBox("最大HP↑", null, true));
         searchCondition.get(j).add(new JCheckBox("比例扣血", null, true));
         searchCondition.get(j).add(new JCheckBox("伤害反弹", null, true));
-        
+
         searchCondition.get(j).add(new JCheckBox("属抗↑", null, true));
         searchCondition.get(j).add(new JCheckBox("属抗↓", null, true));
-        
+
         i = 0;
         javax.swing.GroupLayout jPanel7Layout = new javax.swing.GroupLayout(panFunction);
         panFunction.setLayout(jPanel7Layout);
@@ -1042,19 +1055,56 @@ public class DeckSimu extends javax.swing.JPanel {
         jTable1.getSelectionModel().setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         jTable1.setAutoResizeMode(javax.swing.JTable.AUTO_RESIZE_OFF);
         jScrollPane1.setViewportView(jTable1);
+        i = 1;
         if (jTable1.getColumnModel().getColumnCount() > 0) {
-            jTable1.getColumnModel().getColumn(1).setPreferredWidth(140);
-            jTable1.getColumnModel().getColumn(2).setPreferredWidth(50);
-            jTable1.getColumnModel().getColumn(3).setPreferredWidth(50);
-            jTable1.getColumnModel().getColumn(4).setPreferredWidth(50);
-            jTable1.getColumnModel().getColumn(5).setPreferredWidth(40);
-            jTable1.getColumnModel().getColumn(6).setPreferredWidth(50);
-            jTable1.getColumnModel().getColumn(7).setPreferredWidth(50);
-            jTable1.getColumnModel().getColumn(8).setPreferredWidth(50);
-            jTable1.getColumnModel().getColumn(9).setPreferredWidth(50);
-            jTable1.getColumnModel().getColumn(10).setPreferredWidth(1000);
+            jTable1.getColumnModel().getColumn(i++).setPreferredWidth(64);
+            jTable1.getColumnModel().getColumn(i++).setPreferredWidth(140);
+            jTable1.getColumnModel().getColumn(i++).setPreferredWidth(50);
+            jTable1.getColumnModel().getColumn(i++).setPreferredWidth(50);
+            jTable1.getColumnModel().getColumn(i++).setPreferredWidth(50);
+            jTable1.getColumnModel().getColumn(i++).setPreferredWidth(40);
+            jTable1.getColumnModel().getColumn(i++).setPreferredWidth(50);
+            jTable1.getColumnModel().getColumn(i++).setPreferredWidth(50);
+            jTable1.getColumnModel().getColumn(i++).setPreferredWidth(50);
+            jTable1.getColumnModel().getColumn(i++).setPreferredWidth(50);
+            jTable1.getColumnModel().getColumn(i++).setPreferredWidth(1000);
         }
-
+        jTable1.setRowHeight(64);
+        jTable1.getColumnModel().getColumn(1).setResizable(false);
+        jTable1.setFont(defaultFont);
+        jTable1.getTableHeader().setFont(defaultFont);
+        DefaultTableCellRenderer tcr = new DefaultTableCellRenderer() {
+            Color grayColor = new Color(236, 233, 216);
+            @Override
+            public Component getTableCellRendererComponent(JTable table,
+                    Object value, boolean isSelected, boolean hasFocus,
+                    int row, int column) {
+                if (row % 2 == 0) {
+                    setBackground(grayColor);
+                } else {
+                    setBackground(Color.white);
+                }
+                return super.getTableCellRendererComponent(table, value,
+                        isSelected, hasFocus, row, column);
+            }
+        };
+        DefaultTableCellRenderer imageTcr = new DefaultTableCellRenderer() {
+            @Override
+            public Component getTableCellRendererComponent(JTable table,
+                    Object value, boolean isSelected, boolean hasFocus,
+                    int row, int column) {
+                ImageLabel image = new ImageLabel();
+                File imgFile = new File("img/chr20_" + value.toString() + ".png");
+                if (table.getRowHeight() >= 64 && imgFile.isFile()) {
+                    BufferedImage im;
+                    image.setImagePath(imgFile.getPath());
+                }
+                return image;
+            }
+        };
+        jTable1.getColumnModel().getColumn(1).setCellRenderer(imageTcr);
+        jTable1.setDefaultRenderer(String.class, tcr);
+        jTable1.setDefaultRenderer(Integer.class, tcr);
         jTable1.addMouseListener(new java.awt.event.MouseAdapter() {
             @Override
             public void mouseClicked(java.awt.event.MouseEvent evt) {
@@ -1181,7 +1231,7 @@ public class DeckSimu extends javax.swing.JPanel {
                 }
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            LOG.error(e);
         }
 
         currentDeck = new ArrayList<>();
@@ -1402,8 +1452,9 @@ public class DeckSimu extends javax.swing.JPanel {
                 continue;
             }
             int i = 0;
-            Object[] row = new Object[11];
+            Object[] row = new Object[12];
             row[i++] = strArray[0];
+            row[i++] = strArray[20];
             row[i++] = strArray[5];
             row[i++] = strArray[6];
             row[i++] = strArray[7];
@@ -1479,7 +1530,7 @@ public class DeckSimu extends javax.swing.JPanel {
             br.flush();
             br.close();
         } catch (Exception e) {
-            e.printStackTrace();
+            LOG.error(e);
         }
 
     }
@@ -1498,9 +1549,30 @@ public class DeckSimu extends javax.swing.JPanel {
                 refreshList();
                 refreshAttributes();
             } catch (Exception e) {
-                e.printStackTrace();
+                LOG.error(e);
             }
         }
     }
 
+    public void processShowImage(boolean selected) {
+        File f = new File("img/showImage_" + !selected);
+        if (f.isFile()) {
+            f.delete();
+        }
+        f = new File("img/showImage_" + selected);
+        try {
+            f.createNewFile();
+        } catch (IOException ex) {
+            LOG.error(ex);
+        }
+        if (selected) {
+            jTable1.getTableHeader().getColumnModel().getColumn(1).setMaxWidth(64);
+            jTable1.getTableHeader().getColumnModel().getColumn(1).setMinWidth(64);
+            jTable1.setRowHeight(64);
+        } else {
+            jTable1.getColumnModel().getColumn(1).setMinWidth(0);
+            jTable1.getColumnModel().getColumn(1).setMaxWidth(0);
+            jTable1.setRowHeight(20);
+        }
+    }
 }

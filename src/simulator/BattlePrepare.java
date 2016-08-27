@@ -579,7 +579,7 @@ public class BattlePrepare extends javax.swing.JPanel {
         jComboBox1.setSelectedIndex(0);
     }
 
-    private void loadSphere() {
+    public void loadSphere() {
         File file = new File("Records.MASphere");
         if (!file.exists() || file.isDirectory()) {
             return;
@@ -588,6 +588,8 @@ public class BattlePrepare extends javax.swing.JPanel {
             BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream(file), "UTF-8"));
             for (int i = 0; i < 4; i++) {
                 List<String> spheres = classSphereList[i];
+                spheres.clear();
+                ((DefaultListModel) sphereLists.get(i).getModel()).removeAllElements();
                 for (String str : br.readLine().split(",")) {
                     if (str.isEmpty()) {
                         continue;
@@ -715,6 +717,8 @@ public class BattlePrepare extends javax.swing.JPanel {
             rate = Integer.parseInt(enemyPartLvUpArray[i + 2]);
             if (rate == 100) {
                 rate = EnumType.getNormalRateByName(atkRate[i], type);
+            } else if (rate == 0) {
+                rate = 100;
             }
             sb.append(atkRate[i]).append(rate).append("% ");
         }
@@ -884,7 +888,7 @@ public class BattlePrepare extends javax.swing.JPanel {
                     skill.setDescription(array[16]);
                     skill.setDialogue("");
                 }
-                skill.setDescription("<html>" + skill.getDescription().substring(0, 1) 
+                skill.setDescription("<html>" + skill.getDescription().substring(0, 1)
                         + skill.getDescription().substring(1).replaceAll("【", "<br>【") + "</html>");
 //                skill.setSkill(skillMap.get(skill.getSkillId()));
 //                skill.setSkillRole(new HashMap<>());
@@ -968,7 +972,7 @@ public class BattlePrepare extends javax.swing.JPanel {
                     break;
                 }
                 addEnemySkillToList(enemyLvUpArray, j, enSkillList);
-                
+
             }
             // Normal Attack
             for (int j = 25; j < 26; j += 8) {
@@ -997,12 +1001,12 @@ public class BattlePrepare extends javax.swing.JPanel {
     }
 
     private void addEnemySkillToList(String[] enemyLvUpArray, int startIndex, List<EnemySkill> enSkillList) {
-        try{
+        try {
             EnemySkill skill = new EnemySkill(enemyLvUpArray[startIndex], enemyLvUpArray[startIndex + 1],
                     Integer.parseInt(enemyLvUpArray[startIndex + 2]), enemyLvUpArray[startIndex + 3], Integer.parseInt(enemyLvUpArray[startIndex + 4]),
                     Integer.parseInt(enemyLvUpArray[startIndex + 5]), Integer.parseInt(enemyLvUpArray[startIndex + 6]));
             enSkillList.add(skill);
-        } catch (NumberFormatException ex){
+        } catch (NumberFormatException ex) {
             log.warn(ex);
         }
     }

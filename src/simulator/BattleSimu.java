@@ -489,6 +489,8 @@ public class BattleSimu extends javax.swing.JPanel {
                     typeRate = part.getTypeRate()[dot.getValue()[1]];
                     if (typeRate == 100) {
                         typeRate = EnumType.getNormalRate(EnumType.getIdByIndex(dot.getValue()[1]), part.getType());
+                    } else if (typeRate == 0) {
+                        typeRate = 100;
                     }
                     damage = dot.getValue()[0].longValue() * typeRate / 100;
 
@@ -1099,8 +1101,16 @@ public class BattleSimu extends javax.swing.JPanel {
                 }
                 break;
             case "SKILL_KIND":
-                Integer skillKindIndex = EnumSkillType.getIndexById(enemyAiOrder[ENEMY_AI_TRIGGER_PARAM1]);
-                if (enemy.getSkillTypeTakenNowTurn(skillKindIndex) == 0) {
+                hasBuff = false;
+                for (int i = 0; i < 3; i++) {
+                    if (enemyAiOrder.length > (ENEMY_AI_TRIGGER_PARAM1 + i)) {
+                        Integer skillKindIndex = EnumSkillType.getIndexById(enemyAiOrder[ENEMY_AI_TRIGGER_PARAM1 + i]);
+                        if (enemy.getSkillTypeTakenNowTurn(skillKindIndex) == 1) {
+                            hasBuff = true;
+                        }
+                    }
+                }
+                if (!hasBuff) {
                     return false;
                 }
                 break;
@@ -1126,7 +1136,7 @@ public class BattleSimu extends javax.swing.JPanel {
                 setCard.setDelayedTurnLeft(setCard.getDelayedTurnLeft() - 1);
                 setAction = setCard.getCardInfo();
                 List<String[]> skills = skillMap.get(setAction.getSkillId());
-                if(!skills.get(0)[SKILL_TRIGGER_TIME].trim().equals("ENEMY_ACTION_END")){
+                if (!skills.get(0)[SKILL_TRIGGER_TIME].trim().equals("ENEMY_ACTION_END")) {
                     continue;
                 }
                 // Is triggered. NOTICE: chain is re-computed during card play phase.
@@ -1524,6 +1534,8 @@ public class BattleSimu extends javax.swing.JPanel {
                             Integer tempRate = targetPart.getTypeRate()[EnumType.getIndexById(atkTypeStr)];
                             if (tempRate.equals(100)) {
                                 tempRate = EnumType.getNormalRate(atkTypeStr, targetPart.getType());
+                            } else if (tempRate == 0) {
+                                tempRate = 100;
                             }
                             if (tempRate > typeRate) {
                                 typeRate = tempRate;
@@ -1562,25 +1574,28 @@ public class BattleSimu extends javax.swing.JPanel {
                             if (damage <= 0) {
                                 damage = 1L;
                             }
+                            damage = damage - typeDefence;  // 到底吃不吃减伤呢？
+                            if (damage <= 0) {
+                                damage = 1L;
+                            }
                             if (targetPart.getBuffs().containsKey("ATTACK_BARRIER")
                                     && !targetPart.getBuffs().get("ATTACK_BARRIER").isEmpty()) {
                                 Integer[] value = targetPart.getBuffs().get("ATTACK_BARRIER").get(0).getValue();
-                                if (value[2].equals(EnumPhysicsMagic.getIndexById(physics)) && value[1] > 0) {
+                                if ((value[2].equals(EnumPhysicsMagic.PM3.getIndex()) || value[2].equals(EnumPhysicsMagic.getIndexById(physics)))
+                                        && value[1] > 0) {
                                     value[1]--;
-                                    if (value[0] > damage) {
+                                    if (value[0] > damage ) {
                                         damage = 0L;
                                     }
                                 }
                             }
-                            Long newDamage = damage - typeDefence;  // 到底吃不吃减伤呢？
-                            if (newDamage <= 0L) {
-                                newDamage = damage;
-                            }
-                            damage = newDamage;
+
                             totalDamage += damage;
                             targetPart.setDamageTaken(targetPart.getDamageTaken() + damage.intValue());
                             targetPart.setDamageTakenNowTurn(targetPart.getDamageTakenNowTurn() + damage.intValue());
-                            targetPart.addDamageNumNowTurn(1, EnumPhysicsMagic.getIndexById(physics));
+                            if (damage > 0) {
+                                targetPart.addDamageNumNowTurn(1, EnumPhysicsMagic.getIndexById(physics));
+                            }
                             if (physics.equals("PHYSICS")) {
                                 targetPart.setpDamageTakenNowTurn(targetPart.getpDamageTakenNowTurn() + damage.intValue());
                             } else {
@@ -1666,29 +1681,37 @@ public class BattleSimu extends javax.swing.JPanel {
                                 Integer enchTypeRate = targetPart.getTypeRate()[enchant.getValue()[1]];
                                 if (enchTypeRate.equals(100)) {
                                     enchTypeRate = EnumType.getNormalRate(EnumType.getIdByIndex(enchant.getValue()[1]), targetPart.getType());
+                                } else if (enchTypeRate == 0) {
+                                    enchTypeRate = 100;
                                 }
-                                Long enchDamage = enchant.getValue()[0].longValue() * enchTypeRate / 100 * weaknessRate / 100;
+                                Long enchDamage = 0L;
+                                for (BuffInfo singleBuff : part.getBuffs().get("ENCHANT")) {
+                                    enchDamage += singleBuff.getValue()[0].longValue();
+                                }
+                                enchDamage = enchDamage * enchTypeRate / 100 * weaknessRate / 100;
+                                enchDamage = enchDamage - typeDefence;  
+                                if (enchDamage <= 0L) {
+                                    enchDamage = 1L;
+                                }
+                                
                                 if (targetPart.getBuffs().containsKey("ATTACK_BARRIER")
                                         && !targetPart.getBuffs().get("ATTACK_BARRIER").isEmpty()) {
                                     Integer[] value = targetPart.getBuffs().get("ATTACK_BARRIER").get(0).getValue();
                                     if (value[1] > 0) {
                                         value[1]--;
-                                        if (value[0] > enchDamage) {
+                                        if (value[0] > enchDamage - typeDefence) {
                                             enchDamage = 0L;
                                         }
                                     }
                                 }
-                                newDamage = enchDamage - typeDefence;  // 到底吃不吃减伤呢？
-                                if (newDamage <= 0L) {
-                                    newDamage = enchDamage;
-                                }
-                                enchDamage = newDamage;
+
                                 totalDamage += enchDamage;
                                 targetPart.setDamageTaken(targetPart.getDamageTaken() + enchDamage.intValue());
                                 targetPart.setDamageTakenNowTurn(targetPart.getDamageTakenNowTurn() + enchDamage.intValue());
                                 targetPart.seteDamageTakenNowTurn(targetPart.geteDamageTakenNowTurn(enchant.getValue()[1]) + enchDamage.intValue(), enchant.getValue()[1]);
-                                targetPart.addDamageNumNowTurn(1, EnumPhysicsMagic.getIndexById("ENCHANT"));
-
+                                if (enchDamage > 0) {
+                                    targetPart.addDamageNumNowTurn(1, EnumPhysicsMagic.getIndexById("ENCHANT"));
+                                }
                                 sb = new StringBuilder();
                                 sb.append("对").append(targetPart.getName()).append("造成").append(enchDamage).append("点").
                                         append(EnumType.getNameByIndex(enchant.getValue()[1])).append("属性追加伤害。");
@@ -2246,10 +2269,10 @@ public class BattleSimu extends javax.swing.JPanel {
         Long val;
         BuffInfo buff;
         Long spRate = 0L, spCardLevelRate = 0L;
-        if (skillRole.length > 22 && skillRole[SKILL_ROLE_PARAM5].matches("[\\d]+")) {
+        if (skillRole.length > SKILL_ROLE_PARAM5 && skillRole[SKILL_ROLE_PARAM5].matches("[\\d]+")) {
             spRate = Long.parseLong(skillRole[SKILL_ROLE_PARAM5]);
         }
-        if (skillRole.length > 23 && skillRole[SKILL_ROLE_PARAM6].matches("[\\d]+")) {
+        if (skillRole.length > SKILL_ROLE_PARAM6 && skillRole[SKILL_ROLE_PARAM6].matches("[\\d]+")) {
             spCardLevelRate = Long.parseLong(skillRole[SKILL_ROLE_PARAM6]);
         }
         Integer attrVal = part.getCurrentAttr(EnumAttribute.getIndexById(skillRole[SKILL_ROLE_PARAM3]));
@@ -2581,19 +2604,19 @@ public class BattleSimu extends javax.swing.JPanel {
                     part.getBuffs().get(buff.getBuffName()).add(buff);
                     ((ArthurInfo) part).setCostBlocked(buff.getValue()[0]);
                     break;
-                case "ENCHANT":    // Replace if value is higher.
-                    ignore = false;
+                case "ENCHANT":    // Replace if value have different type. Add if same type.
+                    Boolean addition = false; // This meaning is 'not replace'
                     if (!part.getBuffs().get(buff.getBuffName()).isEmpty()) {
                         BuffInfo exEnchant = part.getBuffs().get(buff.getBuffName()).get(0);
-                        if (exEnchant.getValue()[0] >= buff.getValue()[0]) {
-                            ignore = true;
+                        if (exEnchant.getValue()[1].equals(buff.getValue()[1])) {
+                            addition = true;  // Do replace if
                         }
                     }
-                    if (!ignore) {
+                    if (!addition) {
                         noEffect = false;
                         part.getBuffs().get(buff.getBuffName()).clear();
-                        part.getBuffs().get(buff.getBuffName()).add(buff);
                     }
+                    part.getBuffs().get(buff.getBuffName()).add(buff);
                     break;
                 case "DOT_VALUE_UP":    // Does not add, just change target's dot.
                     String dotId = EnumBuff.getIdByIndex(buff.getValue()[1]);
@@ -2663,10 +2686,12 @@ public class BattleSimu extends javax.swing.JPanel {
                         log.error("ERROR.");
                     }
                     Integer typeRate;
-                    if (targetParts.get(0).getTypeRate()[buff.getValue()[1]].equals(100)) {
+
+                    typeRate = targetParts.get(0).getTypeRate()[buff.getValue()[1]];
+                    if (typeRate == 100) {
                         typeRate = EnumType.getNormalRate(EnumType.getIdByIndex(buff.getValue()[1]), targetParts.get(0).getType());
-                    } else {
-                        typeRate = targetParts.get(0).getTypeRate()[buff.getValue()[1]];
+                    } else if (typeRate == 0) {
+                        typeRate = 100;
                     }
                     sb.append(buff.getTurnLeft() - 1).append("回合间，对").append(getTargetName(targetParts)).
                             append("每回合造成").append(buff.getValue()[0] * typeRate / 100).append("点").
@@ -2810,7 +2835,7 @@ public class BattleSimu extends javax.swing.JPanel {
                         append("的每次攻击追加").append(buff.getValue()[0]).append("点").
                         append(EnumType.getNameByIndex(buff.getValue()[1])).append("属性伤害。");
                 if (noEffect) {
-                    sb.append("（无效果）");
+                    sb.append("（叠加中）");
                 }
                 sb.append("\n");
                 txtBattleInfo.append(sb.toString());
@@ -3072,8 +3097,8 @@ public class BattleSimu extends javax.swing.JPanel {
             if (arthurList.get(i).getCurrentAttr(EnumAttribute.getIndexById("DDUC")) > 0) {
                 sb.append("<br>").append("伤害减免：").append(arthurList.get(i).getCurrentAttr(EnumAttribute.getIndexById("DDUC"))).append("％");
             }
-            for(int j = 0; j < arthurList.get(i).getTypeDef().length; j++){
-                if(!arthurList.get(i).getTypeDef()[j].equals(0)){
+            for (int j = 0; j < arthurList.get(i).getTypeDef().length; j++) {
+                if (!arthurList.get(i).getTypeDef()[j].equals(0)) {
                     sb.append("<br>　").append(EnumType.getNameByIndex(j)).append("抗性：").append(arthurList.get(i).getTypeDef()[j]);
                 }
             }
@@ -3311,8 +3336,7 @@ public class BattleSimu extends javax.swing.JPanel {
             refreshTargetUI(playedTargets);
             setOperationExceptTargetSelection(index, false);
         } else // Try cancel a card.
-        {
-            if (card.getTarget() != null) {
+         if (card.getTarget() != null) {
                 card.setTarget(null);
                 card.setIsPlayed(false);
                 card.setDelayedTurn(0);
@@ -3342,7 +3366,6 @@ public class BattleSimu extends javax.swing.JPanel {
                 refreshTargetUI(null);
                 refreshCardUI(arIndex);
             }
-        }
     }
 
     // Complete the play-card action (target selected).

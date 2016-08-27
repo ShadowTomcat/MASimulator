@@ -46,6 +46,7 @@ public class MainFrame extends javax.swing.JFrame {
         mnuDeck = new javax.swing.JMenuItem();
         mnuSphere = new javax.swing.JMenuItem();
         mnuBattle = new javax.swing.JMenuItem();
+        chkMnuShowImage = new javax.swing.JCheckBoxMenuItem();
         mnuTest = new javax.swing.JMenu();
         mnuBack = new javax.swing.JMenuItem();
         mnuCardSelection = new javax.swing.JCheckBoxMenuItem();
@@ -55,7 +56,7 @@ public class MainFrame extends javax.swing.JFrame {
         mnuAbout = new javax.swing.JMenuItem();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
-        setTitle("MA Simulator v0.94");
+        setTitle("MA Simulator v0.96");
 
         jMenu2.setText("功能");
 
@@ -82,6 +83,15 @@ public class MainFrame extends javax.swing.JFrame {
             }
         });
         jMenu2.add(mnuBattle);
+
+        chkMnuShowImage.setSelected(true);
+        chkMnuShowImage.setText("显示卡牌头像");
+        chkMnuShowImage.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                chkMnuShowImageActionPerformed(evt);
+            }
+        });
+        jMenu2.add(chkMnuShowImage);
 
         jMenuBar1.add(jMenu2);
 
@@ -179,7 +189,13 @@ public class MainFrame extends javax.swing.JFrame {
         dialog.setLocationRelativeTo(this);
         dialog.setVisible(true);
     }//GEN-LAST:event_mnuExpendCostActionPerformed
-    
+
+    private void chkMnuShowImageActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_chkMnuShowImageActionPerformed
+        if (UIUtil.getDeckSimu() != null) {
+            ((DeckSimu) UIUtil.getDeckSimu()).processShowImage(chkMnuShowImage.isSelected());
+        }
+    }//GEN-LAST:event_chkMnuShowImageActionPerformed
+
     public void switchPanel(String panelName) {
         if (currentPanel != null) {
             this.remove(currentPanel);
@@ -204,6 +220,7 @@ public class MainFrame extends javax.swing.JFrame {
                         UIUtil.hideInfoDialog(dialog);
                     } else {
                         currentPanel = UIUtil.getBattlePrepare();
+                        ((BattlePrepare) currentPanel).loadSphere();
                     }
                     this.add(currentPanel);
                     this.validate();
@@ -229,7 +246,7 @@ public class MainFrame extends javax.swing.JFrame {
         this.validate();
         this.repaint();
     }
-    
+
     public void enableTestFunc(boolean value) {
         mnuBack.setEnabled(value);
         mnuCardSelection.setEnabled(value);
@@ -274,12 +291,13 @@ public class MainFrame extends javax.swing.JFrame {
                         log.error(element);
                     }
                 }
-                
+
             }
         });
     }
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
+    private javax.swing.JCheckBoxMenuItem chkMnuShowImage;
     private javax.swing.JMenu jMenu1;
     private javax.swing.JMenu jMenu2;
     private javax.swing.JMenuBar jMenuBar1;
@@ -295,7 +313,7 @@ public class MainFrame extends javax.swing.JFrame {
     // End of variables declaration//GEN-END:variables
     private JPanel currentPanel;
     private static final org.apache.log4j.Logger log = org.apache.log4j.Logger.getLogger(MainFrame.class);
-    
+
     private void initComponentsByCode() {
         Dimension screensize = Toolkit.getDefaultToolkit().getScreenSize();
         int width = (int) screensize.getWidth();
@@ -313,14 +331,24 @@ public class MainFrame extends javax.swing.JFrame {
         this.add(currentPanel);
         this.validate();
         this.repaint();
-        
+
         mnuTest.setEnabled(false);
         
+        File dir = new File("img");
+        File f = new File("img/showImage_false");
+        if (dir.exists() && !f.exists()) {
+            this.chkMnuShowImage.setSelected(true);
+        } else {
+            this.chkMnuShowImage.setSelected(false);
+            ((DeckSimu)currentPanel).processShowImage(false);
+        }
+
         FileUtils.initDummy();
         UIUtil.setMainFrame(this);
     }
-    
+
     public boolean cardSelectionEnabled() {
         return mnuCardSelection.isSelected();
     }
+
 }

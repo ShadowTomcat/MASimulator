@@ -260,6 +260,10 @@ public class SkillTextGenerator {
             } else {
                 cell.setCellValue("");
             }
+            // Image ID
+            cell = getNotNullCell(row, colCount++);
+            cell.setCellStyle(styleCell.getCellStyle());
+            cell.setCellValue(card[29]);
 
             // Description
             cell = getNotNullCell(row, colCount++);
@@ -663,13 +667,13 @@ public class SkillTextGenerator {
                 val = (Integer.parseInt(skillRole[SKILL_ROLE_PARAM4]) + Integer.parseInt(skillRole[SKILL_ROLE_PARAM5]) * maxLevel) / 1000;
                 sb.append(val).append("点");
                 sb.append(EnumAttribute.getNameById(skillRole[SKILL_ROLE_PARAM2]));
-                break;           
+                break;
             case "ATTR_DEF_UP":
                 sb.append(skillRole[SKILL_ROLE_PARAM1]).append("回合/提升");
                 val = Integer.parseInt(skillRole[SKILL_ROLE_PARAM4]) + Integer.parseInt(skillRole[SKILL_ROLE_PARAM5]) * maxLevel / 1000;
                 sb.append(val).append("点");
                 sb.append(EnumType.getNameById(skillRole[SKILL_ROLE_PARAM6])).append("属性抗性");
-                break;  
+                break;
             case "ATTR_DEF_DOWN":
                 sb.append(skillRole[SKILL_ROLE_PARAM1]).append("回合/降低");
                 val = Integer.parseInt(skillRole[SKILL_ROLE_PARAM4]) + Integer.parseInt(skillRole[SKILL_ROLE_PARAM5]) * maxLevel / 1000;
@@ -696,13 +700,17 @@ public class SkillTextGenerator {
             case "REGENERATE_FIXED":
                 sb.append(skillRole[SKILL_ROLE_PARAM1]).append("回合/每回合恢复HP");
                 val = Integer.parseInt(skillRole[SKILL_ROLE_PARAM2]) + (Integer.parseInt(skillRole[SKILL_ROLE_PARAM3]) * maxLevel) / 1000;
-                sb.append(val);               
+                sb.append(val);
                 if (!skillRole[SKILL_ROLE_PARAM4].equals("1000")) {
                     sb.append("+").append(EnumAttribute.getNameById(skillRole[SKILL_ROLE_PARAM6])).append("的").append(Integer.parseInt(skillRole[SKILL_ROLE_PARAM4]) / 10).append("%");
                 }
                 break;
             case "DEBUFF_RELEASE_ONE":
-                sb.append("解除").append(functionMap.get(skillRole[SKILL_ROLE_PARAM3])).append("状态");
+                sb.append("解除").append(functionMap.get(skillRole[SKILL_ROLE_PARAM3]));
+                if (!skillRole[SKILL_ROLE_PARAM4].equals("NULL")) {
+                    sb.append("＆").append(functionMap.get(skillRole[SKILL_ROLE_PARAM4]));
+                }
+                sb.append("状态");
                 break;
             case "GUARD_BREAK_FIXED":
                 sb.append(skillRole[SKILL_ROLE_PARAM1]).append("回合/降低");
@@ -999,7 +1007,7 @@ public class SkillTextGenerator {
             if (row == null) {
                 continue;
             }
-            for (int j = 0; j < 20; j++) {
+            for (int j = 0; j < 21; j++) {
                 sb.append(getStringCellValue(getNotNullCell(row, j))).append(",");
             }
             sb.deleteCharAt(sb.lastIndexOf(","));
