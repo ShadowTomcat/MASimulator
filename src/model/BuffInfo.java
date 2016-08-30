@@ -6,6 +6,7 @@
 package model;
 
 import java.util.Arrays;
+import simulator.BattleSimu;
 
 /**
  *
@@ -39,10 +40,11 @@ public class BuffInfo implements Cloneable {
     private Integer turnLeft;
     private final Integer turnSet;
     private final String type;            //Atk/Int/Mnd/Def/Mdef_up/down, regeneration, stun, card seal, dark, deal bonus/penalty, poison(s), trap, etc.
-    private final Integer[] value;
+    private Integer[] value;
     private final String buffName;        // Used in boost condition check or ai_order check.
     private final boolean isBuff;         //Buff or debuff.
-
+    private static final org.apache.log4j.Logger log = org.apache.log4j.Logger.getLogger(BuffInfo.class);
+    
     public BuffInfo(Integer turnLeft, Integer turnSet, String type, Integer[] value, String buffName, boolean isBuff) {
         this.turnLeft = turnLeft;
         this.turnSet = turnSet;
@@ -81,11 +83,15 @@ public class BuffInfo implements Cloneable {
     }
 
     @Override
-    protected BuffInfo clone() throws CloneNotSupportedException {
-//        BuffInfo clone = (BuffInfo) super.clone(); 
-//        clone.setValue(Arrays.copyOf(value, value.length));
-//        return clone;
-        return (BuffInfo) super.clone();
+    public BuffInfo clone() {
+        try {
+            BuffInfo clone = (BuffInfo) super.clone();
+            clone.value = Arrays.copyOf(value, value.length);
+            return clone;
+        } catch (CloneNotSupportedException ex) {
+            log.error(ex);
+            return null;
+        }
     }
 
     @Override

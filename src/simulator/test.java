@@ -18,6 +18,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import model.ArthurInfo;
 import model.ArthurSkill;
+import model.BuffInfo;
 import model.Constants;
 import model.Enums.EnumAttribute;
 import model.HandCardInfo;
@@ -29,7 +30,7 @@ import util.FileUtils;
  */
 public class test {
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws CloneNotSupportedException {
 //        String a = "1,2,3,,,,,,,,8";
 //        String b = "1,2,3,,,,,,,,";
 //        String[] a1 = a.split(",");
@@ -262,25 +263,31 @@ public class test {
 //        a.remove("A");
 //        System.out.println(buffs);
 //        
-        List<ArthurInfo> a = new ArrayList<>();
-        a.add(new ArthurInfo());
-        a.add(new ArthurInfo());
-        a.add(new ArthurInfo());
-        
-        a.get(0).setName("123333");
-        List<ArthurInfo> b = new ArrayList<>();
-        for(ArthurInfo ai : a){
-            try {
-                b.add(ai.clone());
-            } catch (CloneNotSupportedException ex) {
-                
-            }
-        }
-        
-        a.get(0).setName("123");
-        a.remove(1);
-        System.out.println(a);
-        System.out.println(b);
+//        List<ArthurInfo> a = new ArrayList<>();
+//        a.add(new ArthurInfo());
+//        a.add(new ArthurInfo());
+//        a.add(new ArthurInfo());
+//        
+//        a.get(0).setName("123333");
+//        List<ArthurInfo> b = new ArrayList<>();
+//        for(ArthurInfo ai : a){
+//            try {
+//                b.add(ai.clone());
+//            } catch (CloneNotSupportedException ex) {
+//                
+//            }
+//        }
+//        
+//        a.get(0).setName("123");
+//        a.remove(1);
+//        System.out.println(a);
+//        System.out.println(b);
+        BuffInfo ori = new BuffInfo(3, 4, "AA", new Integer[]{34, 56}, "BB", true);
+        BuffInfo clo = ori.clone();
+        ori.getValue()[0] = 12;
+        ori.extendTurn(3);
+        System.out.println(ori);
+        System.out.println(clo);
     }
 
     private static void resetArr(Integer[] test) {
