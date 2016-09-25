@@ -49,7 +49,7 @@ public class EnemyInfoGenerator {
                 pixel2PoiWidth(60), pixel2PoiWidth(72), pixel2PoiWidth(60), pixel2PoiWidth(60), pixel2PoiWidth(175),
                 pixel2PoiWidth(72), pixel2PoiWidth(50), pixel2PoiWidth(50), pixel2PoiWidth(50), pixel2PoiWidth(50),
                 pixel2PoiWidth(50), pixel2PoiWidth(50), pixel2PoiWidth(50), pixel2PoiWidth(50), pixel2PoiWidth(50),
-                pixel2PoiWidth(50), pixel2PoiWidth(50), pixel2PoiWidth(100), pixel2PoiWidth(100), pixel2PoiWidth(100), 
+                pixel2PoiWidth(50), pixel2PoiWidth(50), pixel2PoiWidth(50), pixel2PoiWidth(100), pixel2PoiWidth(100), pixel2PoiWidth(100),
                 pixel2PoiWidth(100)};
     private final static double CHAR_WIDTH = 8;
     private final static double SPACING = 0;
@@ -57,8 +57,8 @@ public class EnemyInfoGenerator {
     private final static String[] skillArrayTitle = new String[]{"技能ID", "技能名称", "物理/魔法", "目标", "发动条件", "参数1", "参数2", "优先度", "效果ID"};
     private final static Integer[] skillRoleArrayIndex = new Integer[]{0, 7, 8, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30};
     private final static String[] skillRoleArrayTitle = new String[]{"效果ID", "效果类别", "效果目标", "参数1", "参数2", "参数3", "参数4", "参数5", "参数6", "参数7", "参数8", "参数9", "参数10", "倍率使用", "上限"};
-    private final static Integer[] ENEMY_AI_ORDER_INDEX = new Integer[]{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 28, 29, 30, 31};
-    private final static String[] enemyAiOrderTitle = new String[]{"AI条件ID", "Part", "HP下限", "HP上限", "本体HP下限", "本体HP上限",  "T0", "T1", "T2", "T3", "T4", "T5", "T6", "T7", "T8", "T9", "T10", "触发条件", "参数1", "参数2", "参数3"};
+    private final static Integer[] ENEMY_AI_ORDER_INDEX = new Integer[]{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 29, 30, 31, 32};
+    private final static String[] enemyAiOrderTitle = new String[]{"AI条件ID", "Part", "Gauge", "HP下限", "HP上限", "本体HP下限", "本体HP上限", "T0", "T1", "T2", "T3", "T4", "T5", "T6", "T7", "T8", "T9", "T10", "触发条件", "参数1", "参数2", "参数3"};
     private final static String[] roundName = new String[]{"1(3c)", "2(4c)", "3(5c)", "4(6c)", "5(7c)", "6(8c)", "7(9c)", "8(10c)", "9", "10", "双破以后"};
 
     public static void createEnemyInfoExcel(String level, List<EnemyInfo> enemyList, HashMap<String, List<String[]>> skillMap,

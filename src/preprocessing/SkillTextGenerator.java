@@ -121,11 +121,11 @@ public class SkillTextGenerator {
         for (int n = 0; n < cardList.size(); n++) {
             String[] card = cardList.get(n);
             if (!card[0].matches("[\\d]+[\\d]+")
-                    || !(card[6].equals("ULTRARARE") || card[6].equals("MILLIONRARE"))) {
+                    || !(card[7].equals("ULTRARARE") || card[7].equals("MILLIONRARE"))) {
                 continue;
             }
-            if (cardList.size() > n + 1 && card[4].equals(cardList.get(n + 1)[4])
-                    && card[6].equals("ULTRARARE") && cardList.get(n + 1)[6].equals("MILLIONRARE")) {
+            if (cardList.size() > n + 1 && card[5].equals(cardList.get(n + 1)[5])
+                    && card[7].equals("ULTRARARE") && cardList.get(n + 1)[7].equals("MILLIONRARE")) {
                 continue;
             }
             rowCount++;
@@ -139,38 +139,38 @@ public class SkillTextGenerator {
 
             cell = getNotNullCell(row, colCount++);
             cell.setCellStyle(styleCell.getCellStyle());
-            cell.setCellValue(card[2]);
+            cell.setCellValue(card[SAME_CARD_ID]);
 
             cell = getNotNullCell(row, colCount++);
             cell.setCellStyle(styleCell.getCellStyle());
-            cell.setCellValue(card[24]);
+            cell.setCellValue(card[CARD_NORMAL_SKILL]);
 
             cell = getNotNullCell(row, colCount++);
             cell.setCellStyle(styleCell.getCellStyle());
-            cell.setCellValue(card[25]);
-
-            cell = getNotNullCell(row, colCount++);
-            cell.setCellStyle(styleCell.getCellStyle());
-            cell.setCellValue(card[3]);
+            cell.setCellValue(card[CARD_BOOST_SKILL]);
 
             cell = getNotNullCell(row, colCount++);
             cell.setCellStyle(styleCell.getCellStyle());
             cell.setCellValue(card[4]);
 
+            cell = getNotNullCell(row, colCount++);
+            cell.setCellStyle(styleCell.getCellStyle());
+            cell.setCellValue(card[5]);
+
             //Rarity, Class, Type, Cost, HP, ATK, INT, MND, Category, Functions
             cell = getNotNullCell(row, colCount++);
             cell.setCellStyle(styleCell.getCellStyle());
-            if (card[6].equals("ULTRARARE")) {
+            if (card[7].equals("ULTRARARE")) {
                 rareLevel = "UR";
-            } else if (card[6].equals("MILLIONRARE")) {
+            } else if (card[7].equals("MILLIONRARE")) {
                 rareLevel = "MR";
             }
             cell.setCellValue(rareLevel);
 
-            if (!card[25].isEmpty() && !card[25].equals("0")) {
-                skillId = card[25];
+            if (!card[CARD_BOOST_SKILL].isEmpty() && !card[CARD_BOOST_SKILL].equals("0")) {
+                skillId = card[CARD_BOOST_SKILL];
             } else {
-                skillId = card[24];
+                skillId = card[CARD_NORMAL_SKILL];
             }
 
             skillArrayBase = skillMap.get(skillId).get(0);
@@ -197,19 +197,19 @@ public class SkillTextGenerator {
             // HP
             cell = getNotNullCell(row, colCount++);
             cell.setCellStyle(styleCell.getCellStyle());
-            cell.setCellValue(Integer.parseInt(card[10]));
+            cell.setCellValue(Integer.parseInt(card[11]));
             // ATK
             cell = getNotNullCell(row, colCount++);
             cell.setCellStyle(styleCell.getCellStyle());
-            cell.setCellValue(Integer.parseInt(card[13]));
+            cell.setCellValue(Integer.parseInt(card[14]));
             // INT
             cell = getNotNullCell(row, colCount++);
             cell.setCellStyle(styleCell.getCellStyle());
-            cell.setCellValue(Integer.parseInt(card[15]));
+            cell.setCellValue(Integer.parseInt(card[17]));
             // MND
             cell = getNotNullCell(row, colCount++);
             cell.setCellStyle(styleCell.getCellStyle());
-            cell.setCellValue(Integer.parseInt(card[19]));
+            cell.setCellValue(Integer.parseInt(card[20]));
             // Category
             cell = getNotNullCell(row, colCount++);
             cell.setCellStyle(styleCell.getCellStyle());
@@ -229,7 +229,7 @@ public class SkillTextGenerator {
             cell = getNotNullCell(row, colCount++);
             cell.setCellStyle(styleCell.getCellStyle());
             cell.getCellStyle().setAlignment(CellStyle.ALIGN_LEFT);
-            cell.setCellValue(getFunctionText(card[24], rareLevel));
+            cell.setCellValue(getFunctionText(card[CARD_NORMAL_SKILL], rareLevel));
             //System.out.print(";" + colCount);
             // Bonus skill
             cell = getNotNullCell(row, colCount++);
@@ -238,8 +238,8 @@ public class SkillTextGenerator {
             cell.setCellValue(sb.toString());
             //System.out.print(";" + colCount);
             // System.out.println(";" + (colCount - 1));
-            if (!card[25].isEmpty() && !card[25].equals("0")) {
-                cell.setCellValue(getFunctionText(card[25], rareLevel));
+            if (!card[25].isEmpty() && !card[CARD_BOOST_SKILL].equals("0")) {
+                cell.setCellValue(getFunctionText(card[CARD_BOOST_SKILL], rareLevel));
             } else {
                 cell.setCellValue(row.getCell(colCount - 2).getStringCellValue());
             }
@@ -247,23 +247,23 @@ public class SkillTextGenerator {
             // Attack Dialogue
             cell = getNotNullCell(row, colCount++);
             cell.setCellStyle(styleCell.getCellStyle());
-            if (card.length > 93) {
-                cell.setCellValue(card[93]);
+            if (card.length > 84) {
+                cell.setCellValue(card[84]);
             } else {
                 cell.setCellValue("");
             }
             // Support Dialogue
             cell = getNotNullCell(row, colCount++);
             cell.setCellStyle(styleCell.getCellStyle());
-            if (card.length > 94) {
-                cell.setCellValue(card[94]);
+            if (card.length > 85) {
+                cell.setCellValue(card[85]);
             } else {
                 cell.setCellValue("");
             }
             // Image ID
             cell = getNotNullCell(row, colCount++);
             cell.setCellStyle(styleCell.getCellStyle());
-            cell.setCellValue(card[29]);
+            cell.setCellValue(card[33]);
 
             // Description
             cell = getNotNullCell(row, colCount++);
@@ -279,6 +279,10 @@ public class SkillTextGenerator {
         String[] skillArray, skillArrayBase;
         List<String[]> skillRoleArray, skillRoleArrayBase;
 
+        //System.out.println(skillId);
+        if (!skillMap.containsKey(skillId)) {
+            return "";
+        }
         skillArrayBase = skillMap.get(skillId).get(0);
         skillArray = skillMap.get(skillId).get(skillMap.get(skillId).size() - 1);
         skillRoleArrayBase = skillRoleMap.get(skillArrayBase[SKILL_SKILLROLE_COL]);
@@ -295,7 +299,7 @@ public class SkillTextGenerator {
         normalFunctions = new TreeMap<>();
         normalFunctions.put(0, targetMap.get(skillArrayBase[SKILL_TARGET]));
         for (int j = 0; j < skillRoleArrayBase.size(); j++) {
-            //System.out.println(skillRoleArrayBase.get(j)[SKILL_ROLE_FUNCTION_COL]);
+            System.out.println(skillRoleArrayBase.get(j)[SKILL_ROLE_FUNCTION_COL]);
             int key = functionOrderMap.get(skillRoleArrayBase.get(j)[SKILL_ROLE_FUNCTION_COL]);
             while (normalFunctions.containsKey(key)) {
                 key++;
@@ -574,6 +578,7 @@ public class SkillTextGenerator {
         functionOrderMap.put("CARD_TRAP_DAMAGE", i += 10);
         functionOrderMap.put("DOT_VALUE_UP", i += 10);
         functionOrderMap.put("DEAL_BONUS", i += 10);
+        functionOrderMap.put("COST_BLOCK", i += 10);
 
         attackTypeMap = new HashMap<>();
         attackTypeMap.put("PHYSICS", "物理");
@@ -869,6 +874,9 @@ public class SkillTextGenerator {
             case "DOT_VALUE_UP":
                 sb.append(functionMap.get(skillRole[SKILL_ROLE_PARAM6])).append("的效果回合+").append(skillRole[SKILL_ROLE_PARAM1]).
                         append("，伤害+").append(skillRole[SKILL_ROLE_PARAM2]).append("%");
+                break;
+            case "COST_BLOCK":
+                sb.append(skillRole[SKILL_ROLE_PARAM1]).append("回合/COST封印").append(skillRole[SKILL_ROLE_PARAM2]).append("点");
                 break;
             default:
                 System.out.println("Unrecognized function: " + function);

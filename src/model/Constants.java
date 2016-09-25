@@ -18,6 +18,11 @@ public class Constants {
     public static final HashMap<String, String> CATEGORY_MAP = new HashMap<>();
     public static final Long SLEEP_SHORT = 1000L;
     
+    
+    public static final int SAME_CARD_ID = 3;
+    public static final int CARD_NORMAL_SKILL = 25;
+    public static final int CARD_BOOST_SKILL = 26;
+    
     public static final int SKILL_ROLE_FUNCTION_COL = 7;
     public static final int SKILL_ROLE_TARGET = 8;
     public static final int SKILL_ROLE_PARAM1 = 19;
